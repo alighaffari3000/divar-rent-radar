@@ -62,7 +62,11 @@ def _cache_put(key, value):
 
 class SearchRequest(BaseModel):
     city: str = "tehran"
+    # چند محدوده روی نقشه — اجتماعشان جستجو می‌شود
+    polygons: list[list[list[float]]] = []
+    # شکل قدیمی (یک محدوده)؛ فقط برای جستجوهای ذخیره‌شده‌ی قبلی
     polygon: list[list[float]] | None = None
+    # محله‌هایی که علاوه بر محدوده‌های نقشه می‌آیند
     district_ids: list[int] = []
     # فقط برای بازسازی چیپ‌ها موقع ویرایش؛ موتور جستجو نادیده‌اش می‌گیرد
     district_names: list[str] = []
