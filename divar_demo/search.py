@@ -133,6 +133,15 @@ def run_search(*, city="tehran", polygons=None, bbox=None, district_ids=None,
     # هر ناحیه (هر محدوده نقشه، و محله‌های اضافه با هم) جستجوی جدای خودش را
     # دارد و نتیجه‌ها روی token ادغام می‌شوند. یک bbox بزرگ دور همه‌شان
     # فاصله‌ی بینشان را هم می‌گشت و بودجه درخواست نقشه را هدر می‌داد.
+    # جستجوی ذخیره‌شده ممکن است شناسه‌ی مرده («… قدیمی») داشته باشد؛ یکی کافی
+    # است تا دیوار کل فیلتر محله را نادیده بگیرد. پس فقط شناسه‌های زنده می‌روند.
+    if district_ids:
+        live = {str(d["id"]) for d in geo.load_districts(city)}
+        dropped = [i for i in district_ids if str(i) not in live]
+        district_ids = [i for i in district_ids if str(i) in live] or None
+        if dropped:
+            note(f"{len(dropped)} محله‌ی قدیمی که دیوار دیگر نمی‌شناسد کنار گذاشته شد")
+
     regions = [(geo.bbox_of(p), None, p) for p in polygons or []]
     if district_ids:
         # محله هم bbox دارد — مسیر سریع نقشه. فیلتر دقیق محله سمت دیوار می‌ماند.

@@ -101,7 +101,10 @@ fetch("/api/district-shapes")
       pane: "districts",
       style: DISTRICT_STYLE,
       onEachFeature: (f, layer) => {
-        layer.bindTooltip(esc(f.properties.name), { sticky: true, direction: "top" });
+        const label = f.properties.districts.length
+          ? f.properties.name
+          : `${f.properties.name} (در دیوار محله‌ای ندارد)`;
+        layer.bindTooltip(esc(label), { sticky: true, direction: "top" });
         layer.on("mouseover", () => {
           if (hoveredDistrict === layer) return;
           unhoverDistrict();
@@ -259,7 +262,7 @@ const renderExcludeChips = districtPicker({
   chipsId: "exclude-chips",
   stateKey: "excludeDistricts",
   chipClass:
-    "inline-flex items-center gap-1.5 rounded-full bg-error-50 px-3 py-1 text-theme-xs text-error-600 dark:bg-error-500/15 dark:text-error-400",
+    "flex min-w-0 items-center justify-between gap-1.5 rounded-lg bg-error-50 px-3 py-1.5 text-theme-xs text-error-600 dark:bg-error-500/15 dark:text-error-400",
   chipBtnClass: "text-error-400 hover:text-error-600",
 });
 
@@ -471,7 +474,7 @@ function applyPayload(params) {
       const id = (ids || [])[i];
       const name = (names || [])[i];
       return { id: id ?? name, name: name || `محله ${id}` };
-    });
+    }).filter((d) => !d.name.trim().endsWith("قدیمی")); // شناسه‌ی مرده؛ geo.load_districts را ببینید
   };
   state.districts = pairs(p.district_ids, p.district_names);
   state.excludeDistricts = pairs(p.exclude_district_ids, p.exclude_district_names);

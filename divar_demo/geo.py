@@ -81,6 +81,11 @@ def load_districts(city="tehran"):
         raw = json.load(fh)["districts"]
     out = []
     for d in raw:
+        # محله‌های «… قدیمی» شناسه‌ی مرده‌اند: کاتالوگ هنوز برمی‌گرداندشان ولی فیلتر
+        # دیوار نمی‌شناسدشان، و اگر حتی یکی در لیست باشد کل فیلتر محله نادیده
+        # گرفته می‌شود (۲۰۲۶-۰۹-۲۶ روی هر ۴۵۳ شناسه تست شد: دقیقاً همین ۳۲ تا).
+        if (d.get("name") or "").strip().endswith("قدیمی"):
+            continue
         loc = d.get("default_location") or {}
         out.append({
             "id": d.get("id"),

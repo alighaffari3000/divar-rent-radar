@@ -51,6 +51,18 @@ def _rings(relation):
     return rings
 
 
+def _centroid(ring):
+    return (sum(p[0] for p in ring) / len(ring), sum(p[1] for p in ring) / len(ring))
+
+
+def _smallest_bbox_containing(districts, point):
+    lon, lat = point
+    boxes = [d for d in districts if d.get("bbox")
+             and d["bbox"][0] <= lon <= d["bbox"][2] and d["bbox"][1] <= lat <= d["bbox"][3]]
+    return min(boxes, key=lambda d: (d["bbox"][2] - d["bbox"][0]) * (d["bbox"][3] - d["bbox"][1]),
+               default=None)
+
+
 def build(city="tehran"):
     bbox = geo.city_bbox(city)
     query = f"""[out:json][timeout:180];
@@ -68,6 +80,14 @@ out geom;"""
             continue
         inside = [{"id": d["id"], "name": d["name"]} for d in districts
                   if any(geo.point_in_polygon(d["lon"], d["lat"], r) for r in rings)]
+        if not inside:
+            # مرکز هیچ محله‌ی دیوار داخل این مرز نیست (محله‌ی دیوار بزرگ‌تر است و
+            # مرکزش در مرز همسایه افتاده). کوچک‌ترین bbox دیوار که مرکز این مرز را
+            # دارد. ۲۰۲۶-۰۹-۲۶ با نام محله‌ای که دیوار روی آگهی‌های داخل این مرزها
+            # گذاشته مقایسه شد؛ هر جا آگهی بود، درست درآمد.
+            owner = _smallest_bbox_containing(districts, _centroid(rings[0]))
+            if owner:
+                inside = [{"id": owner["id"], "name": owner["name"]}]
         features.append({
             "type": "Feature",
             "properties": {
