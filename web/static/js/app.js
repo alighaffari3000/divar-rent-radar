@@ -602,7 +602,7 @@ function renderSearches() {
     state.searches
       .map(
         (s, i) => `<tr class="border-b border-gray-100 dark:border-gray-800" data-sid="${s.id}">
-        <td class="td" colspan="${COLS - 1}">
+        <td class="td whitespace-normal" colspan="${COLS - 1}">
           <span class="${s.enabled ? "text-gray-800 dark:text-white/90" : "text-gray-400 line-through dark:text-gray-600"}">${esc(s.name)}</span>
           ${editing && editing.id === s.id
             ? '<span class="ms-2 rounded-full bg-brand-50 px-2 py-0.5 text-theme-xs text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">در حال ویرایش</span>'
@@ -647,13 +647,16 @@ function renderSearches() {
 }
 
 /** خلاصه یک‌خطی از فیلترها، تا بشود جستجوها را از هم تشخیص داد. */
+// لیست محله ممکن است صدتا باشد؛ چندتای اول و تعداد بقیه کافی است
+const shortNames = (names) =>
+  esc(names.length <= 4 ? names.join("، ") : `${names.slice(0, 3).join("، ")} و ${fa(names.length - 3)} محله‌ی دیگر`);
+
 function describeParams(p) {
   const bits = [];
   const areas = p.polygons?.length || (p.polygon?.length ? 1 : 0);
   if (areas) bits.push(areas > 1 ? `${fa(areas)} محدوده نقشه` : "محدوده نقشه");
-  if (p.district_names?.length) bits.push(esc(p.district_names.join("، ")));
-  if (p.exclude_district_names?.length)
-    bits.push(`بجز ${esc(p.exclude_district_names.join("، "))}`);
+  if (p.district_names?.length) bits.push(shortNames(p.district_names));
+  if (p.exclude_district_names?.length) bits.push(`بجز ${shortNames(p.exclude_district_names)}`);
   if (p.size_min || p.size_max)
     bits.push(`${fa(p.size_min ?? 0)}–${p.size_max ? fa(p.size_max) : "∞"}م²`);
   if (p.rooms_min) bits.push(`${fa(p.rooms_min)}+ خواب`);
