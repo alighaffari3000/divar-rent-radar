@@ -19,8 +19,18 @@
     x-init="darkMode = JSON.parse(localStorage.getItem('darkMode') ?? 'false');
             $watch('darkMode', v => localStorage.setItem('darkMode', JSON.stringify(v)))"
     :class="{'dark bg-gray-900': darkMode === true}"
+    @keydown.escape.window="sidebarToggle = false"
   >
     <div class="flex h-screen overflow-hidden">
+      <!-- پس‌زمینه تیره پشت سایدبار در موبایل؛ لمسش سایدبار را می‌بندد -->
+      <div
+        x-show="sidebarToggle"
+        x-cloak
+        x-transition.opacity
+        @click="sidebarToggle = false"
+        class="fixed inset-0 z-9998 bg-gray-900/50 xl:hidden"
+      ></div>
+
       <!-- سایدبار -->
       <aside
         :class="sidebarToggle ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'"
@@ -42,6 +52,12 @@
               بر پایه رهن کامل معادل
             </p>
           </div>
+          <button type="button" @click="sidebarToggle = false" aria-label="بستن منو"
+            class="mr-auto flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 xl:hidden dark:border-gray-800 dark:text-gray-400">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <form id="filters" class="flex flex-col gap-5 pb-8">
