@@ -41,22 +41,41 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap",
 }).addTo(map);
 
-/* مرز محله‌ها: با هاور پررنگ می‌شود و نامش می‌آید، با کلیک به «محله‌های اضافه»
-   می‌رود یا از آن درمی‌آید. پنل جدا زیر overlayPane تا محدوده‌های کشیده‌شده و
-   نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
+/* مرز محله‌ها: با هاور پررنگ می‌شود و نامش می‌آید، با کلیک به «محله‌های
+   انتخاب‌شده» می‌رود یا از آن درمی‌آید. انتخاب‌شده آبی، استثنا قرمز. پنل جدا زیر
+   overlayPane تا نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
 map.createPane("districts").style.zIndex = 350;
-const DISTRICT_STYLE = { color: "#465fff", weight: 1, opacity: 0.2, fillOpacity: 0 };
-const DISTRICT_SELECTED = { color: "#465fff", weight: 1.5, opacity: 0.8, fillOpacity: 0.3 };
-const DISTRICT_HOVER = { weight: 2.5, opacity: 1, fillOpacity: 0.25 };
+const BLUE = "#465fff";
+const RED = "#f04438";
+const DISTRICT_STYLE = { color: BLUE, weight: 1, opacity: 0.2, fillOpacity: 0 };
 let districtShapes = null;
 
-// یک مرز ممکن است چند محله دیوار داشته باشد؛ اگر یکی‌شان انتخاب شده، آبی است
-const shapeSelected = (layer) =>
-  layer.feature.properties.districts.some((d) => state.districts.some((x) => x.id === d.id));
+// یک محله یا انتخاب‌شده است یا استثنا، نه هر دو. چیپ استثنای جستجوی قدیمی گاهی
+// فقط نام دارد، پس با نام هم مقایسه می‌شود.
+const sameDistrict = (a, b) => a.id === b.id || a.name.trim() === b.name.trim();
+const inList = (key, d) => state[key].some((x) => sameDistrict(x, d));
+const OTHER_LIST = { districts: "excludeDistricts", excludeDistricts: "districts" };
+
+/** محله‌ها را به یک لیست می‌برد و از لیست دیگر درمی‌آورد. */
+function addDistricts(key, list) {
+  const other = OTHER_LIST[key];
+  state[other] = state[other].filter((x) => !list.some((d) => sameDistrict(x, d)));
+  state[key].push(...list.filter((d) => !inList(key, d)));
+  renderChips();
+  renderExcludeChips();
+}
+
+// یک مرز ممکن است چند محله دیوار داشته باشد؛ اگر یکی‌شان در لیست است، رنگ آن لیست را دارد
+const shapeIn = (layer, key) => layer.feature.properties.districts.some((d) => inList(key, d));
+const shapeSelected = (layer) => shapeIn(layer, "districts");
 
 function districtStyle(layer) {
-  if (layer === hoveredDistrict) return { ...DISTRICT_HOVER, fillOpacity: shapeSelected(layer) ? 0.4 : 0.25 };
-  return shapeSelected(layer) ? DISTRICT_SELECTED : DISTRICT_STYLE;
+  // استثنا بر انتخاب مقدم است، همان‌طور که جستجو اعمالشان می‌کند
+  const excluded = shapeIn(layer, "excludeDistricts");
+  const marked = excluded || shapeSelected(layer);
+  const color = excluded ? RED : BLUE;
+  if (layer === hoveredDistrict) return { color, weight: 2.5, opacity: 1, fillOpacity: marked ? 0.4 : 0.25 };
+  return marked ? { color, weight: 1.5, opacity: 0.8, fillOpacity: 0.3 } : DISTRICT_STYLE;
 }
 
 function paintDistricts() {
@@ -85,13 +104,18 @@ function toggleShape(layer) {
     setProgress("این محدوده محله‌ای از دیوار ندارد");
     return;
   }
-  if (shapeSelected(layer)) {
-    const ids = new Set(inside.map((d) => d.id));
-    state.districts = state.districts.filter((x) => !ids.has(x.id));
+  // محله‌ی رنگی (آبی یا قرمز) با کلیک بی‌رنگ می‌شود؛ بی‌رنگ، انتخاب‌شده
+  const drop = (key) =>
+    (state[key] = state[key].filter((x) => !inside.some((d) => sameDistrict(x, d))));
+  if (shapeIn(layer, "excludeDistricts")) {
+    drop("excludeDistricts");
+    renderExcludeChips(); // خودش نقشه را هم دوباره رنگ می‌کند
+  } else if (shapeSelected(layer)) {
+    drop("districts");
+    renderChips();
   } else {
-    state.districts.push(...inside.map((d) => ({ id: d.id, name: d.name.trim() })));
+    addDistricts("districts", inside.map((d) => ({ id: d.id, name: d.name.trim() })));
   }
-  renderChips(); // خودش نقشه را هم دوباره رنگ می‌کند
 }
 
 fetch("/api/district-shapes")
@@ -153,10 +177,15 @@ async function selectDistrictsInPolygon(polygon) {
     setProgress(`محله‌های داخل کادر پیدا نشد: ${await res.text()}`);
     return;
   }
-  const found = (await res.json()).filter((d) => !state.districts.some((x) => x.id === d.id));
-  state.districts.push(...found);
-  renderChips();
-  setProgress(found.length ? `${fa(found.length)} محله اضافه شد` : "محله‌ی تازه‌ای داخل کادر نبود");
+  // محله‌ی استثنا را کاربر عمداً کنار گذاشته؛ کادر کشیدن نباید برش گرداند
+  const fresh = (await res.json()).filter((d) => !inList("districts", d));
+  const found = fresh.filter((d) => !inList("excludeDistricts", d));
+  addDistricts("districts", found);
+  const skipped = fresh.length - found.length;
+  setProgress(
+    (found.length ? `${fa(found.length)} محله اضافه شد` : "محله‌ی تازه‌ای داخل کادر نبود") +
+      (skipped ? ` (${fa(skipped)} محله‌ی استثنا کنار ماند)` : "")
+  );
 }
 
 map.on(L.Draw.Event.CREATED, (e) =>
@@ -230,10 +259,9 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
           "rounded-lg border border-gray-200 px-3 py-1.5 text-right text-theme-xs text-gray-700 hover:border-brand-500 hover:text-brand-500 dark:border-gray-700 dark:text-gray-400";
         btn.textContent = d.name;
         btn.onclick = () => {
-          if (!state[stateKey].find((x) => x.id === d.id)) state[stateKey].push(d);
+          addDistricts(stateKey, [d]); // از لیست دیگر درمی‌آید
           input.value = "";
           suggestionBox.innerHTML = "";
-          renderChips();
         };
         suggestionBox.appendChild(btn);
       });
@@ -261,6 +289,7 @@ const renderExcludeChips = districtPicker({
   boxId: "exclude-suggestions",
   chipsId: "exclude-chips",
   stateKey: "excludeDistricts",
+  onChange: paintDistricts,
   chipClass:
     "flex min-w-0 items-center justify-between gap-1.5 rounded-lg bg-error-50 px-3 py-1.5 text-theme-xs text-error-600 dark:bg-error-500/15 dark:text-error-400",
   chipBtnClass: "text-error-400 hover:text-error-600",
@@ -478,6 +507,9 @@ function applyPayload(params) {
   };
   state.districts = pairs(p.district_ids, p.district_names);
   state.excludeDistricts = pairs(p.exclude_district_ids, p.exclude_district_names);
+  // جستجوی قدیمی ممکن است محله‌ای را در هر دو داشته باشد؛ جستجو همیشه آن را
+  // استثنا حساب کرده، پس همان‌جا می‌ماند
+  state.districts = state.districts.filter((d) => !inList("excludeDistricts", d));
   renderChips();
   renderExcludeChips();
 
