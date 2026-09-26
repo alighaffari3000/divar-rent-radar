@@ -46,6 +46,15 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
    تا محدوده‌های کشیده‌شده و نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
 map.createPane("districts").style.zIndex = 350;
 const DISTRICT_STYLE = { color: "#465fff", weight: 1, opacity: 0.2, fillOpacity: 0 };
+// فقط یک محله در هر لحظه پررنگ است. به mouseout تکیه نمی‌کنیم: مرورگر بعد از
+// جابه‌جایی گره SVG (bringToFront) گاهی آن را نمی‌فرستد و محله‌ها روشن می‌ماندند.
+let hoveredDistrict = null;
+function unhoverDistrict() {
+  if (!hoveredDistrict) return;
+  hoveredDistrict.setStyle(DISTRICT_STYLE);
+  hoveredDistrict.closeTooltip();
+  hoveredDistrict = null;
+}
 fetch("/api/district-shapes")
   .then((res) => res.json())
   .then((shapes) =>
@@ -55,14 +64,17 @@ fetch("/api/district-shapes")
       onEachFeature: (f, layer) => {
         layer.bindTooltip(esc(f.properties.name), { sticky: true, direction: "top" });
         layer.on("mouseover", () => {
+          if (hoveredDistrict === layer) return;
+          unhoverDistrict();
+          hoveredDistrict = layer;
           layer.setStyle({ weight: 2.5, opacity: 1, fillOpacity: 0.25 });
-          layer.bringToFront();
         });
-        layer.on("mouseout", () => layer.setStyle(DISTRICT_STYLE));
+        layer.on("mouseout", unhoverDistrict);
       },
     }).addTo(map)
   )
   .catch(() => {}); // بدون مرزها نقشه همچنان کار می‌کند
+map.on("mouseout", unhoverDistrict);
 
 const drawnItems = new L.FeatureGroup().addTo(map);
 state.markers = L.layerGroup().addTo(map);
