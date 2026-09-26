@@ -42,23 +42,63 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap",
 }).addTo(map);
 
-/* مرز محله‌ها: با هاور پررنگ می‌شود و نامش می‌آید. پنل جدا زیر overlayPane
-   تا محدوده‌های کشیده‌شده و نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
+/* مرز محله‌ها: با هاور پررنگ می‌شود و نامش می‌آید، با کلیک به «محله‌های اضافه»
+   می‌رود یا از آن درمی‌آید. پنل جدا زیر overlayPane تا محدوده‌های کشیده‌شده و
+   نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
 map.createPane("districts").style.zIndex = 350;
 const DISTRICT_STYLE = { color: "#465fff", weight: 1, opacity: 0.2, fillOpacity: 0 };
+const DISTRICT_SELECTED = { color: "#465fff", weight: 1.5, opacity: 0.8, fillOpacity: 0.3 };
+const DISTRICT_HOVER = { weight: 2.5, opacity: 1, fillOpacity: 0.25 };
+let districtShapes = null;
+
+// یک مرز ممکن است چند محله دیوار داشته باشد؛ اگر یکی‌شان انتخاب شده، آبی است
+const shapeSelected = (layer) =>
+  layer.feature.properties.districts.some((d) => state.districts.some((x) => x.id === d.id));
+
+function districtStyle(layer) {
+  if (layer === hoveredDistrict) return { ...DISTRICT_HOVER, fillOpacity: shapeSelected(layer) ? 0.4 : 0.25 };
+  return shapeSelected(layer) ? DISTRICT_SELECTED : DISTRICT_STYLE;
+}
+
+function paintDistricts() {
+  districtShapes?.eachLayer((l) => l.setStyle(districtStyle(l)));
+}
+
 // فقط یک محله در هر لحظه پررنگ است. به mouseout تکیه نمی‌کنیم: مرورگر بعد از
 // جابه‌جایی گره SVG (bringToFront) گاهی آن را نمی‌فرستد و محله‌ها روشن می‌ماندند.
 let hoveredDistrict = null;
 function unhoverDistrict() {
   if (!hoveredDistrict) return;
-  hoveredDistrict.setStyle(DISTRICT_STYLE);
-  hoveredDistrict.closeTooltip();
+  const layer = hoveredDistrict;
   hoveredDistrict = null;
+  layer.setStyle(districtStyle(layer));
+  layer.closeTooltip();
 }
+
+// وسط کشیدن یا حذف محدوده، کلیک مال ابزار نقشه است نه انتخاب محله
+let drawingActive = false;
+map.on("draw:drawstart draw:deletestart", () => (drawingActive = true));
+map.on("draw:drawstop draw:deletestop", () => (drawingActive = false));
+
+function toggleShape(layer) {
+  const inside = layer.feature.properties.districts;
+  if (!inside.length) {
+    setProgress("این محدوده محله‌ای از دیوار ندارد");
+    return;
+  }
+  if (shapeSelected(layer)) {
+    const ids = new Set(inside.map((d) => d.id));
+    state.districts = state.districts.filter((x) => !ids.has(x.id));
+  } else {
+    state.districts.push(...inside.map((d) => ({ id: d.id, name: d.name.trim() })));
+  }
+  renderChips(); // خودش نقشه را هم دوباره رنگ می‌کند
+}
+
 fetch("/api/district-shapes")
   .then((res) => res.json())
-  .then((shapes) =>
-    L.geoJSON(shapes, {
+  .then((shapes) => {
+    districtShapes = L.geoJSON(shapes, {
       pane: "districts",
       style: DISTRICT_STYLE,
       onEachFeature: (f, layer) => {
@@ -67,12 +107,16 @@ fetch("/api/district-shapes")
           if (hoveredDistrict === layer) return;
           unhoverDistrict();
           hoveredDistrict = layer;
-          layer.setStyle({ weight: 2.5, opacity: 1, fillOpacity: 0.25 });
+          layer.setStyle(districtStyle(layer));
         });
         layer.on("mouseout", unhoverDistrict);
+        layer.on("click", () => {
+          if (!drawingActive) toggleShape(layer);
+        });
       },
-    }).addTo(map)
-  )
+    }).addTo(map);
+    paintDistricts(); // چیپ‌هایی که قبل از رسیدن مرزها بارگذاری شده بودند
+  })
   .catch(() => {}); // بدون مرزها نقشه همچنان کار می‌کند
 map.on("mouseout", unhoverDistrict);
 
@@ -132,7 +176,7 @@ document.addEventListener("keydown", (e) => {
 
 /* دو جعبه محله داریم: یکی برای «فقط این محله‌ها»، یکی برای «هیچ‌وقت این‌ها».
    هر دو رفتار یکسانی دارند، پس یک سازنده مشترک. */
-function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnClass }) {
+function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnClass, onChange }) {
   const input = document.getElementById(inputId);
   const suggestionBox = document.getElementById(boxId);
   const chipBox = document.getElementById(chipsId);
@@ -150,6 +194,7 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
       };
       chipBox.appendChild(chip);
     });
+    onChange?.();
   }
 
   input.addEventListener("input", () => {
@@ -188,6 +233,7 @@ const renderChips = districtPicker({
   boxId: "district-suggestions",
   chipsId: "district-chips",
   stateKey: "districts",
+  onChange: paintDistricts,
   chipClass:
     "inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-theme-xs text-brand-600 dark:bg-brand-500/15 dark:text-brand-400",
   chipBtnClass: "text-brand-400 hover:text-error-500",

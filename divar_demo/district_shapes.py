@@ -66,12 +66,17 @@ out geom;"""
         rings = _rings(rel)
         if not rings:
             continue
-        names = [d["name"].strip() for d in districts
-                 if any(geo.point_in_polygon(d["lon"], d["lat"], r) for r in rings)]
+        inside = [{"id": d["id"], "name": d["name"]} for d in districts
+                  if any(geo.point_in_polygon(d["lon"], d["lat"], r) for r in rings)]
         features.append({
             "type": "Feature",
-            # محله‌ای از شهرداری که هیچ محله دیواری در آن نیست، با نام OSM
-            "properties": {"name": "، ".join(names) or rel["tags"].get("name", "")},
+            "properties": {
+                # محله‌ای از شهرداری که هیچ محله دیواری در آن نیست، با نام OSM
+                "name": "، ".join(d["name"].strip() for d in inside)
+                        or rel["tags"].get("name", ""),
+                # برای انتخاب با کلیک — شناسه همان است که فیلتر محله دیوار می‌خواهد
+                "districts": inside,
+            },
             "geometry": {"type": "MultiPolygon",
                          "coordinates": [[[list(p) for p in r]] for r in rings]},
         })
