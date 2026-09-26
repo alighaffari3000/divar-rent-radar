@@ -49,9 +49,15 @@ def params_from_request(data):
     floor_min, floor_max = d.pop("floor_min", None), d.pop("floor_max", None)
     d.pop("refresh", None)
 
+    # جستجوهای قدیمی یک polygon تکی دارند؛ جدیدها لیست polygons
+    polygons = list(d.pop("polygons", None) or [])
+    if d.get("polygon"):
+        polygons.append(d["polygon"])
+    d.pop("polygon", None)
+
     out = {
         "city": d.pop("city", None) or "tehran",
-        "polygon": [tuple(p) for p in d.pop("polygon", None) or []] or None,
+        "polygons": [[tuple(p) for p in poly] for poly in polygons if poly] or None,
         "district_ids": [str(x) for x in d.pop("district_ids", None) or []] or None,
         "size": (size_min, size_max) if (size_min or size_max) else None,
         "floor": (floor_min, floor_max) if (floor_min or floor_max) else None,
@@ -84,7 +90,7 @@ def _exclude_names(ids, names, city):
     return {n for n in out if n} or None
 
 
-def run_search(*, city="tehran", polygon=None, bbox=None, district_ids=None,
+def run_search(*, city="tehran", polygons=None, bbox=None, district_ids=None,
                size=None, rooms_min=None, credit_max=None, rent_max=None,
                parking=False, elevator=False, storage=False, owner_only=False,
                real_photos=False, has_video=False,
@@ -100,9 +106,10 @@ def run_search(*, city="tehran", polygon=None, bbox=None, district_ids=None,
                rate=listing.DEPOSIT_PER_RENT, on_progress=None, store=None):
     """جستجوی کامل. بازگشت یک dict با نتایج و آمار.
 
-    polygon: [(lon, lat), ...] — اولویت با این است
-    bbox:    (min_lon, min_lat, max_lon, max_lat)
-    اگر هیچ‌کدام نبود، district_ids استفاده می‌شود؛ اگر آن هم نبود، کل شهر.
+    polygons:     [[(lon, lat), ...], ...] — چند محدوده روی نقشه
+    district_ids: محله‌هایی که علاوه بر محدوده‌ها می‌آیند (اجتماع، نه اشتراک)
+    bbox:         (min_lon, min_lat, max_lon, max_lat) — فقط وقتی هیچ‌کدام نبود
+    اگر هیچ‌کدام نبود، کل شهر.
     """
     city_ids = [CITIES[city]]
     note = lambda msg: on_progress and on_progress(msg)
@@ -123,45 +130,62 @@ def run_search(*, city="tehran", polygon=None, bbox=None, district_ids=None,
              "exclude_districts": _exclude_names(exclude_district_ids,
                                                  exclude_district_names, city)}
 
-    if polygon and not bbox:
-        bbox = geo.bbox_of(polygon)
-    elif not bbox and district_ids:
+    # هر ناحیه (هر محدوده نقشه، و محله‌های اضافه با هم) جستجوی جدای خودش را
+    # دارد و نتیجه‌ها روی token ادغام می‌شوند. یک bbox بزرگ دور همه‌شان
+    # فاصله‌ی بینشان را هم می‌گشت و بودجه درخواست نقشه را هدر می‌داد.
+    regions = [(geo.bbox_of(p), None, p) for p in polygons or []]
+    if district_ids:
         # محله هم bbox دارد — مسیر سریع نقشه. فیلتر دقیق محله سمت دیوار می‌ماند.
-        bbox = geo.districts_bbox(district_ids, city)
-    elif not bbox:
-        bbox = geo.city_bbox(city)
-        note("بدون محدوده — کل شهر جستجو می‌شود")
+        regions.append((geo.districts_bbox(district_ids, city) or geo.city_bbox(city),
+                        district_ids, None))
+    if not regions:
+        regions.append((bbox or geo.city_bbox(city), None, None))
+        if not bbox:
+            note("بدون محدوده — کل شهر جستجو می‌شود")
 
-    form_data = collector.build_form_data(
-        ranges=ranges, rooms_min=rooms_min, booleans=booleans,
-        owner_only=owner_only, districts=district_ids, choices=choices)
+    merged, total, complete = {}, 0, True
+    for n, (region_bbox, region_districts, polygon) in enumerate(regions, 1):
+        tag = f"ناحیه {n} از {len(regions)}: " if len(regions) > 1 else ""
+        form_data = collector.build_form_data(
+            ranges=ranges, rooms_min=rooms_min, booleans=booleans,
+            owner_only=owner_only, districts=region_districts, choices=choices)
 
-    # --- مرحله ۱: نقشه ---
-    note("جستجوی نقشه‌ای ...")
-    total, by_token, complete, leaves = collector.search_map_area(
-        city_ids, form_data, bbox,
-        on_progress=lambda d, l, f, t: note(f"خانه {d} (مانده {l}) — {f} از {t} آگهی"))
-    items = list(by_token.values())
-    if not complete:
-        note(f"پوشش ناقص: {len(items)} از {total} آگهی — محدوده را کوچک‌تر کنید")
+        # --- مرحله ۱: نقشه ---
+        note(f"{tag}جستجوی نقشه‌ای ...")
+        count, by_token, region_complete, leaves = collector.search_map_area(
+            city_ids, form_data, region_bbox,
+            on_progress=lambda d, l, f, t: note(f"{tag}خانه {d} (مانده {l}) — {f} از {t} آگهی"))
+        items = list(by_token.values())
+        total += count
+        complete = complete and region_complete
+        if not region_complete:
+            note(f"{tag}پوشش ناقص: {len(items)} از {count} آگهی — محدوده را کوچک‌تر کنید")
 
-    # --- مرحله ۲: قیمت دقیق، به ازای هر خانه ---
-    note(f"گرفتن قیمت دقیق از {len(leaves)} خانه ...")
-    exact = collector.exact_prices_for_cells(city_ids, form_data, leaves)
-    note(f"قیمت دقیق برای {len(exact)} از {len(items)} آگهی")
+        # --- مرحله ۲: قیمت دقیق، به ازای هر خانه ---
+        note(f"{tag}گرفتن قیمت دقیق از {len(leaves)} خانه ...")
+        exact = collector.exact_prices_for_cells(city_ids, form_data, leaves)
+        note(f"{tag}قیمت دقیق برای {len(exact)} از {len(items)} آگهی")
 
-    # --- مرحله ۳: نرمال‌سازی ---
-    normalized = [listing.from_map_card(card, exact.get(card["token"]), rate=rate)
-                  for card in items]
+        # --- مرحله ۳: نرمال‌سازی ---
+        normalized = [listing.from_map_card(card, exact.get(card["token"]), rate=rate)
+                      for card in items]
 
-    # --- مرحله ۴: فیلتر چندضلعی ---
-    if polygon:
-        before = len(normalized)
-        normalized = geo.filter_to_polygon(normalized, polygon)
-        note(f"فیلتر چندضلعی: {before} → {len(normalized)}")
+        # --- مرحله ۴: فیلتر چندضلعی ---
+        if polygon:
+            before = len(normalized)
+            normalized = geo.filter_to_polygon(normalized, polygon)
+            note(f"{tag}فیلتر چندضلعی: {before} → {len(normalized)}")
 
-    districts = geo.districts_in_polygon(polygon, city) if polygon else []
-    return _finish(normalized, total, rate, note, districts=districts, store=store,
+        for item in normalized:
+            merged.setdefault(item["token"], item)
+
+    districts = {}
+    for polygon in polygons or []:
+        for d in geo.districts_in_polygon(polygon, city):
+            districts.setdefault(d["id"], d)
+    # ponytail: total جمع شمارش ناحیه‌هاست؛ ناحیه‌های هم‌پوشان دوبار شمرده می‌شوند
+    return _finish(list(merged.values()), total, rate, note,
+                   districts=list(districts.values()), store=store,
                    complete=complete,
                    size=size, rooms_min=rooms_min, credit_max=credit_max,
                    rent_max=rent_max, parking=parking, elevator=elevator,

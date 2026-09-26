@@ -14,8 +14,8 @@ const SCORE_BASE = 50;
 const WEIGHT_LABELS = { deal: "قیمت", age: "نوسازی", metro: "مترو" };
 
 let state = {
-  polygon: null,
-  districts: [], // {id, name}
+  polygons: [], // هر محدوده روی نقشه: [[lng, lat], ...]
+  districts: [], // {id, name} — علاوه بر محدوده‌ها می‌آیند
   excludeDistricts: [], // {id, name} — هرگز نمایش داده نشوند
   results: [],
   weights: { deal: 30, age: 15, metro: 10 },
@@ -59,16 +59,20 @@ map.addControl(
   })
 );
 
+// چند محدوده مجاز است؛ state همیشه از لایه‌های روی نقشه بازسازی می‌شود
+function syncPolygons() {
+  state.polygons = drawnItems
+    .getLayers()
+    .map((l) => l.getLatLngs()[0].map((p) => [p.lng, p.lat]));
+}
+
 map.on(L.Draw.Event.CREATED, (e) => {
-  drawnItems.clearLayers();
   drawnItems.addLayer(e.layer);
-  state.polygon = e.layer.getLatLngs()[0].map((p) => [p.lng, p.lat]);
-  setProgress(`محدوده انتخاب شد (${fa(state.polygon.length)} نقطه)`);
+  syncPolygons();
+  setProgress(`${fa(state.polygons.length)} محدوده روی نقشه`);
 });
 
-map.on(L.Draw.Event.DELETED, () => {
-  state.polygon = null;
-});
+map.on(L.Draw.Event.DELETED, syncPolygons);
 
 /* ---------- تمام‌صفحه کردن نقشه ---------- */
 
@@ -248,7 +252,7 @@ function buildPayload(refresh = false) {
   const on = (k) => data.get(k) === "on";
 
   return {
-    polygon: state.polygon,
+    polygons: state.polygons,
     district_ids: numericIds(state.districts),
     district_names: state.districts.map((d) => d.name),
     exclude_district_ids: numericIds(state.excludeDistricts),
@@ -381,17 +385,16 @@ function applyPayload(params) {
   renderChips();
   renderExcludeChips();
 
-  // چندضلعی روی نقشه
+  // محدوده‌ها روی نقشه — جستجوی قدیمی فقط یک polygon دارد
   drawnItems.clearLayers();
-  state.polygon = p.polygon || null;
-  if (state.polygon && state.polygon.length) {
-    const layer = L.polygon(
-      state.polygon.map(([lng, lat]) => [lat, lng]),
-      { color: "#465fff" }
-    );
-    drawnItems.addLayer(layer);
-    map.fitBounds(layer.getBounds(), { padding: [20, 20] });
-  }
+  const polys = p.polygons?.length ? p.polygons : p.polygon?.length ? [p.polygon] : [];
+  polys.forEach((poly) =>
+    drawnItems.addLayer(
+      L.polygon(poly.map(([lng, lat]) => [lat, lng]), { color: "#465fff" })
+    )
+  );
+  syncPolygons();
+  if (polys.length) map.fitBounds(drawnItems.getBounds(), { padding: [20, 20] });
 }
 
 saveBtn.onclick = async () => {
@@ -519,7 +522,8 @@ function renderSearches() {
 /** خلاصه یک‌خطی از فیلترها، تا بشود جستجوها را از هم تشخیص داد. */
 function describeParams(p) {
   const bits = [];
-  if (p.polygon?.length) bits.push("محدوده نقشه");
+  const areas = p.polygons?.length || (p.polygon?.length ? 1 : 0);
+  if (areas) bits.push(areas > 1 ? `${fa(areas)} محدوده نقشه` : "محدوده نقشه");
   if (p.district_names?.length) bits.push(esc(p.district_names.join("، ")));
   if (p.exclude_district_names?.length)
     bits.push(`بجز ${esc(p.exclude_district_names.join("، "))}`);
