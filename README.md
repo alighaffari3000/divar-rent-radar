@@ -75,7 +75,7 @@ trash and bookmarks are the **same database** as the panel's.
 ```text
 1. Create a bot in BotFather, put the token in .env: TELEGRAM_BOT_TOKEN=...
 2. Add the bot to your group and make it admin (Delete messages permission)
-3. Run:  python -m divar_demo.bot
+3. Run:  python -m divar_rent_radar.bot
 4. Send /id in the group; put the negative group id in .env: TELEGRAM_CHAT_ID=-100...
 5. Restart. To keep it alive, schedule run_bot.cmd at logon with restart-on-failure.
 ```
@@ -94,7 +94,7 @@ how much it moved since you bookmarked it, and whether the listing is still up.
 ## Command line
 
 ```bash
-python -m divar_demo.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
+python -m divar_rent_radar.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
 ```
 
 `--district` is optional; omit it to search the whole city.
@@ -102,13 +102,13 @@ python -m divar_demo.main --district اختیاریه --size 80-150 --rooms 2 --
 ## Layout
 
 ```text
-divar_demo/collector.py   the only file that talks to Divar
-divar_demo/listing.py     normalization, equivalent rent, hard filters, median, scoring
-divar_demo/geo.py         polygons, district catalogue, metro distance
-divar_demo/store.py       detail cache, price history, marks, bot state (SQLite)
-divar_demo/search.py      search engine — CLI, panel and bot all call this
-divar_demo/main.py        command line
-divar_demo/bot.py         Telegram bot (polling + internal scheduler)
+divar_rent_radar/collector.py   the only file that talks to Divar
+divar_rent_radar/listing.py     normalization, equivalent rent, hard filters, median, scoring
+divar_rent_radar/geo.py         polygons, district catalogue, metro distance
+divar_rent_radar/store.py       detail cache, price history, marks, bot state (SQLite)
+divar_rent_radar/search.py      search engine — CLI, panel and bot all call this
+divar_rent_radar/main.py        command line
+divar_rent_radar/bot.py         Telegram bot (polling + internal scheduler)
 web/app.py                web panel (FastAPI)
 web/static/               page, map, TailAdmin styling
 data/districts_tehran.json   453 Tehran districts
@@ -236,7 +236,7 @@ python -m uvicorn web.app:app --port 8420
 ```text
 ۱. در BotFather یک بات بسازید و توکن را در .env بگذارید: TELEGRAM_BOT_TOKEN=...
 ۲. بات را به گروه اضافه و ادمین کنید (اجازه‌ی Delete messages)
-۳. اجرا:  python -m divar_demo.bot
+۳. اجرا:  python -m divar_rent_radar.bot
 ۴. در گروه /id بزنید؛ شناسه‌ی منفی گروه را در .env بگذارید: TELEGRAM_CHAT_ID=-100...
 ۵. دوباره اجرا کنید. برای همیشه‌روشن ماندن، run_bot.cmd را در Task Scheduler با
    «At log on» و «Restart on failure» بگذارید.
@@ -256,7 +256,7 @@ python -m uvicorn web.app:app --port 8420
 ## خط فرمان
 
 ```bash
-python -m divar_demo.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
+python -m divar_rent_radar.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
 ```
 
 گزینه‌ی `--district` اختیاری است؛ ندهید یعنی کل شهر.
@@ -264,13 +264,13 @@ python -m divar_demo.main --district اختیاریه --size 80-150 --rooms 2 --
 ## ساختار
 
 ```text
-divar_demo/collector.py   تنها فایلی که با دیوار حرف می‌زند
-divar_demo/listing.py     نرمال‌سازی، رهن معادل، فیلتر قطعی، median، امتیاز
-divar_demo/geo.py         چندضلعی، کاتالوگ محله، فاصله مترو
-divar_demo/store.py       کش جزئیات، تاریخچه قیمت، علامت‌ها، وضعیت بات (SQLite)
-divar_demo/search.py      موتور جستجو — خط فرمان و پنل و بات هر سه همین را صدا می‌زنند
-divar_demo/main.py        خط فرمان
-divar_demo/bot.py         بات تلگرام (polling + زمان‌بند داخلی)
+divar_rent_radar/collector.py   تنها فایلی که با دیوار حرف می‌زند
+divar_rent_radar/listing.py     نرمال‌سازی، رهن معادل، فیلتر قطعی، median، امتیاز
+divar_rent_radar/geo.py         چندضلعی، کاتالوگ محله، فاصله مترو
+divar_rent_radar/store.py       کش جزئیات، تاریخچه قیمت، علامت‌ها، وضعیت بات (SQLite)
+divar_rent_radar/search.py      موتور جستجو — خط فرمان و پنل و بات هر سه همین را صدا می‌زنند
+divar_rent_radar/main.py        خط فرمان
+divar_rent_radar/bot.py         بات تلگرام (polling + زمان‌بند داخلی)
 web/app.py                پنل وب (FastAPI)
 web/static/               صفحه، نقشه، استایل TailAdmin
 data/districts_tehran.json   ۴۵۳ محله تهران

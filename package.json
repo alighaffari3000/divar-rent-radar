@@ -1,5 +1,5 @@
 {
-  "name": "divar-scraper-web",
+  "name": "divar-rent-radar-web",
   "private": true,
   "scripts": {
     "css": "tailwindcss -i web/static/css/style.css -o web/static/css/app.css --minify",

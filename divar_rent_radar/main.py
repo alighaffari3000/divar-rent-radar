@@ -1,7 +1,7 @@
 """خط فرمان: آگهی‌های اجاره دیوار را بگیر، به رهن کامل معادل تبدیل کن، مرتب کن.
 
 نمونه:
-  python -m divar_demo.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
+  python -m divar_rent_radar.main --district اختیاریه --size 80-150 --rooms 2 --real-photos
 
 همه فیلترها اختیاری‌اند؛ هرکدام را ندهید اصلاً به دیوار فرستاده نمی‌شود.
 """

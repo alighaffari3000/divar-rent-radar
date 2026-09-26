@@ -1,13 +1,13 @@
 # پلن اجرایی بات تلگرام — گروه، دکمه‌ها، اجرای مداوم
 
-> **وضعیت (۱۴۰۵/۰۶/۲۵):** گام‌های ۱ تا ۵ ساخته و آفلاین تست شد (`divar_demo/bot.py`).
+> **وضعیت (۱۴۰۵/۰۶/۲۵):** گام‌های ۱ تا ۵ ساخته و آفلاین تست شد (`divar_rent_radar/bot.py`).
 > تصمیم‌ها: گروه معمولی، یک گروه، بوکمارک مشترک، عکس مگر تزئینی، آستانه ۷۰،
 > فاصله ۳۰ دقیقه — فاصله و آستانه از پنل قابل تغییرند. یک تغییر نسبت به پلن:
 > اجرای اول فقط ۱۰ تای برتر را می‌فرستد و بقیه را baseline می‌کند (جلوگیری از سیل).
 > گام ۶ (Task Scheduler) دستی است: `run_bot.cmd`.
 
 تاریخ: ۱۴۰۵/۰۶/۲۵ (2026-09-16)
-مبنا: `divar_demo/notify.py` (ارسال یک‌طرفه فعلی)، جدول `marks` در `store.py`،
+مبنا: `divar_rent_radar/notify.py` (ارسال یک‌طرفه فعلی)، جدول `marks` در `store.py`،
 و `search.params_from_request` — همه‌ی منطق جستجو و امتیاز از قبل هست؛ این پلن
 فقط پوسته‌ی تلگرامی می‌سازد.
 
@@ -45,7 +45,7 @@
 ‏APScheduler جدا، نه cron.
 
 ```text
-python -m divar_demo.bot
+python -m divar_rent_radar.bot
 ```
 
 - زمان‌بند فعلی داخل FastAPI (`start_scheduler`) **حذف می‌شود**. دو زمان‌بند
@@ -193,7 +193,7 @@ sent_posts (
 ## ۵. ساختار کد
 
 ```text
-divar_demo/
+divar_rent_radar/
   bot.py            راه‌اندازی، هندلرها، زمان‌بند  (~۲۵۰ خط)
   bot_format.py     قالب caption و /bookmarks (از notify.format_item جدا می‌شود)
   notify.py         worth_sending می‌ماند؛ run_saved_searches حذف/منتقل می‌شود

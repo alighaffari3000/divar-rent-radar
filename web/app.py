@@ -1,4 +1,4 @@
-"""پنل وب — یک پوسته نازک روی divar_demo.search.
+"""پنل وب — یک پوسته نازک روی divar_rent_radar.search.
 
 هیچ منطق قیمت یا فیلتری اینجا نیست.
 """
@@ -16,8 +16,8 @@ from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from divar_demo import config, geo, search  # noqa: E402
-from divar_demo.store import Store  # noqa: E402
+from divar_rent_radar import config, geo, search  # noqa: E402
+from divar_rent_radar.store import Store  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(HERE, "static")
@@ -136,7 +136,7 @@ def districts_in_polygon(req: PolygonRequest):
 
 @app.get("/api/district-shapes")
 def district_shapes():
-    """مرز محله‌ها برای هاور روی نقشه — ساخته‌ی divar_demo.district_shapes."""
+    """مرز محله‌ها برای هاور روی نقشه — ساخته‌ی divar_rent_radar.district_shapes."""
     return FileResponse(os.path.join(geo.DATA_DIR, "district_shapes_tehran.json"),
                         media_type="application/json")
 
@@ -146,7 +146,7 @@ PREFETCH_TOP = 20  # جزئیات چند آگهی برتر را از قبل بگ
 
 def _prefetch(tokens):
     """جزئیات آگهی‌های برتر را در پس‌زمینه گرم می‌کند تا کلیک کاربر فوری باشد."""
-    from divar_demo import collector
+    from divar_rent_radar import collector
 
     with Store() as store:
         collector.fetch_details_parallel(tokens, store=store, workers=3)
@@ -312,7 +312,7 @@ def remove_mark(kind: str, token: str):
 @app.get("/api/post/{token}")
 async def post_detail(token: str):
     """جزئیات تنبل یک آگهی — با کش."""
-    from divar_demo import collector
+    from divar_rent_radar import collector
 
     def work():
         with Store() as store:

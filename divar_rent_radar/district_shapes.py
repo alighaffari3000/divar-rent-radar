@@ -6,7 +6,7 @@
 داخل آن است، تا همان نامی دیده شود که در جعبه محله تایپ می‌شود.
 
 فقط برای نمایش است، نه فیلتر. اجرا (یک بار، یا وقتی OSM عوض شد):
-    python -m divar_demo.district_shapes
+    python -m divar_rent_radar.district_shapes
 داده‌ی OSM تحت ODbL است — © OpenStreetMap contributors.
 """
 
@@ -69,7 +69,7 @@ def build(city="tehran"):
 relation["boundary"="administrative"]["admin_level"="11"]({bbox[1]},{bbox[0]},{bbox[3]},{bbox[2]});
 out geom;"""
     resp = requests.post(OVERPASS, data={"data": query}, timeout=300,
-                         headers={"User-Agent": "divar-scraper"})
+                         headers={"User-Agent": "divar-rent-radar"})
     resp.raise_for_status()
 
     districts = [d for d in geo.load_districts(city) if d["lon"] is not None]

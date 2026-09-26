@@ -1,7 +1,7 @@
 # پلن اجرایی — نسخه ۲ (پنل وب + انتخاب محدوده روی نقشه)
 
 تاریخ: ۱۴۰۵/۰۶/۲۴ (2026-09-15)
-جایگزین نسخه‌ی ۱. مبنا: دموی فعلی (`divar_demo/`) + نقشه‌ی API در `docs/DIVAR_API.md`.
+جایگزین نسخه‌ی ۱. مبنا: دموی فعلی (`divar_rent_radar/`) + نقشه‌ی API در `docs/DIVAR_API.md`.
 
 ## چه چیزی نسبت به نسخه‌ی ۱ عوض شد و چرا
 
@@ -145,7 +145,7 @@ web/
     js/app.js             نقشه، فرم، جدول، polling
     fonts/                Vazirmatn
   vendor/tailadmin/       کلون مخزن، فقط برای برداشتن قطعه‌ها — سرو نمی‌شود
-divar_demo/
+divar_rent_radar/
   search.py               run_search(params) -> results
                           (از main.py بیرون کشیده می‌شود؛ CLI و وب هر دو صدایش می‌زنند)
 ```

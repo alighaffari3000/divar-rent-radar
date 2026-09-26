@@ -5,4 +5,4 @@ rem   Action: Start a program → این فایل   |   Start in: پوشه پر�
 cd /d "%~dp0"
 set PYTHONIOENCODING=utf-8
 if not exist data mkdir data
-python -m divar_demo.bot >> data\bot.log 2>&1
+python -m divar_rent_radar.bot >> data\bot.log 2>&1

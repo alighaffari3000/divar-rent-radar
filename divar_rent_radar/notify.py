@@ -4,8 +4,8 @@
 آگهی جدیدِ زیر median، یا آگهی‌ای که رهن معادلش کم شده.
 
 اجرا:
-    python -m divar_demo.notify            ارسال واقعی
-    python -m divar_demo.notify --dry-run  فقط نمایش، بدون ارسال
+    python -m divar_rent_radar.notify            ارسال واقعی
+    python -m divar_rent_radar.notify --dry-run  فقط نمایش، بدون ارسال
 """
 
 import argparse
