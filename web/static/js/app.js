@@ -42,6 +42,28 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap",
 }).addTo(map);
 
+/* مرز محله‌ها: با هاور پررنگ می‌شود و نامش می‌آید. پنل جدا زیر overlayPane
+   تا محدوده‌های کشیده‌شده و نقطه‌های آگهی رویش بمانند و کلیک‌پذیر باشند. */
+map.createPane("districts").style.zIndex = 350;
+const DISTRICT_STYLE = { color: "#465fff", weight: 1, opacity: 0.2, fillOpacity: 0 };
+fetch("/api/district-shapes")
+  .then((res) => res.json())
+  .then((shapes) =>
+    L.geoJSON(shapes, {
+      pane: "districts",
+      style: DISTRICT_STYLE,
+      onEachFeature: (f, layer) => {
+        layer.bindTooltip(esc(f.properties.name), { sticky: true, direction: "top" });
+        layer.on("mouseover", () => {
+          layer.setStyle({ weight: 2.5, opacity: 1, fillOpacity: 0.25 });
+          layer.bringToFront();
+        });
+        layer.on("mouseout", () => layer.setStyle(DISTRICT_STYLE));
+      },
+    }).addTo(map)
+  )
+  .catch(() => {}); // بدون مرزها نقشه همچنان کار می‌کند
+
 const drawnItems = new L.FeatureGroup().addTo(map);
 state.markers = L.layerGroup().addTo(map);
 

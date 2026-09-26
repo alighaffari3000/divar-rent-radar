@@ -122,6 +122,13 @@ def districts(q: str = "", city: str = "tehran"):
     return [{"id": d["id"], "name": d["name"]} for d in found]
 
 
+@app.get("/api/district-shapes")
+def district_shapes():
+    """مرز محله‌ها برای هاور روی نقشه — ساخته‌ی divar_demo.district_shapes."""
+    return FileResponse(os.path.join(geo.DATA_DIR, "district_shapes_tehran.json"),
+                        media_type="application/json")
+
+
 PREFETCH_TOP = 20  # جزئیات چند آگهی برتر را از قبل بگیریم
 
 
