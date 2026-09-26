@@ -296,14 +296,18 @@
 
           <div>
             <label class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">
-              محله‌های اضافه
+              محله‌های انتخاب‌شده
             </label>
-            <input type="text" id="district-search" placeholder="مثلاً اختیاریه" autocomplete="off"
-              class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-theme-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-hidden dark:border-gray-700 dark:text-white/90" />
+            <!-- چیپ‌ها و جعبه‌ی تایپ در یک کادر. قدش با تعداد محله‌ها بزرگ می‌شود؛
+                 سقف و اسکرول ندارد -->
+            <div class="flex min-h-28 flex-col gap-1.5 rounded-xl border border-gray-300 p-2 focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/10 dark:border-gray-700">
+              <div id="district-chips" class="grid flex-1 grid-cols-2 content-start gap-1.5"></div>
+              <input type="text" id="district-search" placeholder="تایپ نام محله، مثلاً اختیاریه" autocomplete="off"
+                class="h-9 w-full rounded-lg border-0 bg-transparent px-2 text-theme-sm text-gray-800 focus:ring-0 focus:outline-hidden dark:text-white/90" />
+            </div>
             <div id="district-suggestions" class="mt-1.5 flex flex-col gap-1"></div>
-            <div id="district-chips" class="mt-2 flex flex-wrap gap-1.5"></div>
             <p class="mt-1.5 text-theme-xs text-gray-500 dark:text-gray-400">
-              علاوه بر محدوده‌های نقشه، حتی اگر بیرونشان باشند. با کلیک روی محله در نقشه هم انتخاب یا برداشته می‌شود. می‌شود چند محدوده کشید.
+              کلیک روی محله در نقشه انتخاب یا برش می‌دارد. کادر کشیدن همه‌ی محله‌های داخلش را اضافه می‌کند. خالی یعنی کل شهر.
             </p>
           </div>
 

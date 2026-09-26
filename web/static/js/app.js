@@ -14,7 +14,6 @@ const SCORE_BASE = 50;
 const WEIGHT_LABELS = { deal: "قیمت", age: "نوسازی", metro: "مترو" };
 
 let state = {
-  polygons: [], // هر محدوده روی نقشه: [[lng, lat], ...]
   districts: [], // {id, name} — علاوه بر محدوده‌ها می‌آیند
   excludeDistricts: [], // {id, name} — هرگز نمایش داده نشوند
   results: [],
@@ -77,8 +76,8 @@ function unhoverDistrict() {
 
 // وسط کشیدن یا حذف محدوده، کلیک مال ابزار نقشه است نه انتخاب محله
 let drawingActive = false;
-map.on("draw:drawstart draw:deletestart", () => (drawingActive = true));
-map.on("draw:drawstop draw:deletestop", () => (drawingActive = false));
+map.on("draw:drawstart", () => (drawingActive = true));
+map.on("draw:drawstop", () => (drawingActive = false));
 
 function toggleShape(layer) {
   const inside = layer.feature.properties.districts;
@@ -120,12 +119,12 @@ fetch("/api/district-shapes")
   .catch(() => {}); // بدون مرزها نقشه همچنان کار می‌کند
 map.on("mouseout", unhoverDistrict);
 
-const drawnItems = new L.FeatureGroup().addTo(map);
 state.markers = L.layerGroup().addTo(map);
 
 map.addControl(
   new L.Control.Draw({
-    edit: { featureGroup: drawnItems, edit: false },
+    // کادر کشیده‌شده روی نقشه نمی‌ماند (پایین را ببینید)، پس ابزار حذف لازم نیست
+    edit: false,
     draw: {
       polygon: { showArea: false, shapeOptions: { color: "#465fff" } },
       rectangle: { shapeOptions: { color: "#465fff" } },
@@ -137,20 +136,29 @@ map.addControl(
   })
 );
 
-// چند محدوده مجاز است؛ state همیشه از لایه‌های روی نقشه بازسازی می‌شود
-function syncPolygons() {
-  state.polygons = drawnItems
-    .getLayers()
-    .map((l) => l.getLatLngs()[0].map((p) => [p.lng, p.lat]));
+/* کادر فقط ابزار انتخاب دسته‌جمعی محله است: محله‌هایی که مرکزشان داخلش است به
+   «محله‌های انتخاب‌شده» می‌روند و خود کادر روی نقشه نمی‌ماند. اگر کادر فیلتر
+   جغرافیایی می‌ماند، برداشتن یک محله از لیست بی‌اثر بود چون کادر هنوز
+   می‌پوشاندش. */
+async function selectDistrictsInPolygon(polygon) {
+  const res = await fetch("/api/districts-in-polygon", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ polygon }),
+  });
+  if (!res.ok) {
+    setProgress(`محله‌های داخل کادر پیدا نشد: ${await res.text()}`);
+    return;
+  }
+  const found = (await res.json()).filter((d) => !state.districts.some((x) => x.id === d.id));
+  state.districts.push(...found);
+  renderChips();
+  setProgress(found.length ? `${fa(found.length)} محله اضافه شد` : "محله‌ی تازه‌ای داخل کادر نبود");
 }
 
-map.on(L.Draw.Event.CREATED, (e) => {
-  drawnItems.addLayer(e.layer);
-  syncPolygons();
-  setProgress(`${fa(state.polygons.length)} محدوده روی نقشه`);
-});
-
-map.on(L.Draw.Event.DELETED, syncPolygons);
+map.on(L.Draw.Event.CREATED, (e) =>
+  selectDistrictsInPolygon(e.layer.getLatLngs()[0].map((p) => [p.lng, p.lat]))
+);
 
 /* ---------- تمام‌صفحه کردن نقشه ---------- */
 
@@ -176,7 +184,7 @@ document.addEventListener("keydown", (e) => {
 
 /* دو جعبه محله داریم: یکی برای «فقط این محله‌ها»، یکی برای «هیچ‌وقت این‌ها».
    هر دو رفتار یکسانی دارند، پس یک سازنده مشترک. */
-function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnClass, onChange }) {
+function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnClass, onChange, emptyText }) {
   const input = document.getElementById(inputId);
   const suggestionBox = document.getElementById(boxId);
   const chipBox = document.getElementById(chipsId);
@@ -184,10 +192,14 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
 
   function renderChips() {
     chipBox.innerHTML = "";
+    if (emptyText && !state[stateKey].length) {
+      chipBox.innerHTML = `<span class="col-span-2 self-center text-center text-theme-xs text-gray-400">${emptyText}</span>`;
+    }
     state[stateKey].forEach((d) => {
       const chip = document.createElement("span");
       chip.className = chipClass;
-      chip.innerHTML = `${esc(d.name)} <button type="button" class="${chipBtnClass}">✕</button>`;
+      chip.title = d.name;
+      chip.innerHTML = `<span class="truncate">${esc(d.name)}</span> <button type="button" class="shrink-0 ${chipBtnClass}">✕</button>`;
       chip.querySelector("button").onclick = () => {
         state[stateKey] = state[stateKey].filter((x) => x.id !== d.id);
         renderChips();
@@ -225,6 +237,7 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
     }, 250);
   });
 
+  renderChips(); // متن «خالی» از همان اول دیده شود
   return renderChips;
 }
 
@@ -234,9 +247,10 @@ const renderChips = districtPicker({
   chipsId: "district-chips",
   stateKey: "districts",
   onChange: paintDistricts,
+  emptyText: "روی نقشه روی محله کلیک کنید یا کادر بکشید",
   chipClass:
-    "inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-theme-xs text-brand-600 dark:bg-brand-500/15 dark:text-brand-400",
-  chipBtnClass: "text-brand-400 hover:text-error-500",
+    "flex min-w-0 items-center justify-between gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-theme-xs text-gray-700 dark:bg-white/5 dark:text-gray-300",
+  chipBtnClass: "text-gray-500 hover:text-error-500",
 });
 
 const renderExcludeChips = districtPicker({
@@ -332,7 +346,6 @@ function buildPayload(refresh = false) {
   const on = (k) => data.get(k) === "on";
 
   return {
-    polygons: state.polygons,
     district_ids: numericIds(state.districts),
     district_names: state.districts.map((d) => d.name),
     exclude_district_ids: numericIds(state.excludeDistricts),
@@ -465,16 +478,15 @@ function applyPayload(params) {
   renderChips();
   renderExcludeChips();
 
-  // محدوده‌ها روی نقشه — جستجوی قدیمی فقط یک polygon دارد
-  drawnItems.clearLayers();
+  // جستجوی ذخیره‌شده‌ی قدیمی با کادر: کادرها به محله‌هایشان تبدیل می‌شوند.
+  // تا دوباره ذخیره نشود، اطلاع‌رسانی همچنان با خود کادر اجرا می‌شود.
   const polys = p.polygons?.length ? p.polygons : p.polygon?.length ? [p.polygon] : [];
-  polys.forEach((poly) =>
-    drawnItems.addLayer(
-      L.polygon(poly.map(([lng, lat]) => [lat, lng]), { color: "#465fff" })
-    )
-  );
-  syncPolygons();
-  if (polys.length) map.fitBounds(drawnItems.getBounds(), { padding: [20, 20] });
+  polys.forEach(selectDistrictsInPolygon);
+  if (polys.length) {
+    map.fitBounds(L.latLngBounds(polys.flat().map(([lng, lat]) => [lat, lng])), {
+      padding: [20, 20],
+    });
+  }
 }
 
 saveBtn.onclick = async () => {

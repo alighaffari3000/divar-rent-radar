@@ -122,6 +122,18 @@ def districts(q: str = "", city: str = "tehran"):
     return [{"id": d["id"], "name": d["name"]} for d in found]
 
 
+class PolygonRequest(BaseModel):
+    polygon: list[list[float]]
+    city: str = "tehran"
+
+
+@app.post("/api/districts-in-polygon")
+def districts_in_polygon(req: PolygonRequest):
+    """محله‌هایی که مرکزشان داخل کادر کشیده‌شده است — کادر فقط ابزار انتخاب محله است."""
+    found = geo.districts_in_polygon([tuple(p) for p in req.polygon], req.city)
+    return [{"id": d["id"], "name": d["name"].strip()} for d in found]
+
+
 @app.get("/api/district-shapes")
 def district_shapes():
     """مرز محله‌ها برای هاور روی نقشه — ساخته‌ی divar_demo.district_shapes."""
