@@ -221,13 +221,18 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
   const suggestionBox = document.getElementById(boxId);
   const chipBox = document.getElementById(chipsId);
   let timer = null;
+  // لیست بلند سایدبار را خیلی دراز می‌کرد؛ جمع‌شده فقط چند ردیف اول دیده می‌شود
+  const COLLAPSED = 6;
+  let expanded = false;
 
   function renderChips() {
     chipBox.innerHTML = "";
     if (emptyText && !state[stateKey].length) {
       chipBox.innerHTML = `<span class="col-span-2 self-center text-center text-theme-xs text-gray-400">${emptyText}</span>`;
     }
-    state[stateKey].forEach((d) => {
+    const list = state[stateKey];
+    const shown = expanded ? list : list.slice(0, COLLAPSED);
+    shown.forEach((d) => {
       const chip = document.createElement("span");
       chip.className = chipClass;
       chip.title = d.name;
@@ -238,6 +243,17 @@ function districtPicker({ inputId, boxId, chipsId, stateKey, chipClass, chipBtnC
       };
       chipBox.appendChild(chip);
     });
+    if (list.length > COLLAPSED) {
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "col-span-2 rounded-lg py-1 text-theme-xs text-brand-500 hover:bg-gray-50 dark:hover:bg-white/5";
+      toggle.textContent = expanded ? "جمع کردن ▴" : `نمایش همه (${fa(list.length - COLLAPSED)} محله دیگر) ▾`;
+      toggle.onclick = () => {
+        expanded = !expanded;
+        renderChips();
+      };
+      chipBox.appendChild(toggle);
+    }
     onChange?.();
   }
 

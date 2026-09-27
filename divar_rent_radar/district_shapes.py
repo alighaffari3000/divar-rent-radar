@@ -63,6 +63,26 @@ def _smallest_bbox_containing(districts, point):
                default=None)
 
 
+def _merge_same_districts(features):
+    """مرزهایی که همان محله‌های دیوار را دارند یک عارضه می‌شوند.
+
+    محله‌ی دیوار گاهی چند محله‌ی شهرداری است (مثلاً نیروی هوایی (پیروزی)).
+    جدا که بمانند روی نقشه دو محله‌ی هم‌نام دیده می‌شوند و کلیک روی یکی هر دو را
+    انتخاب می‌کند، چون فیلتر دیوار فقط شناسه را می‌شناسد. مرزهای بی‌محله جدا می‌مانند.
+    """
+    merged = {}
+    out = []
+    for f in features:
+        key = tuple(sorted(d["id"] for d in f["properties"]["districts"]))
+        if key and key in merged:
+            merged[key]["geometry"]["coordinates"] += f["geometry"]["coordinates"]
+            continue
+        if key:
+            merged[key] = f
+        out.append(f)
+    return out
+
+
 def build(city="tehran"):
     bbox = geo.city_bbox(city)
     query = f"""[out:json][timeout:180];
@@ -101,6 +121,7 @@ out geom;"""
                          "coordinates": [[[list(p) for p in r]] for r in rings]},
         })
 
+    features = _merge_same_districts(features)
     with open(OUT, "w", encoding="utf-8") as fh:
         json.dump({"type": "FeatureCollection", "features": features}, fh,
                   ensure_ascii=False, separators=(",", ":"))
