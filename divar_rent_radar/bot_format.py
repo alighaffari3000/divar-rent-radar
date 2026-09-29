@@ -86,7 +86,11 @@ def caption(item, median):
     if item.get("price_is_rounded"):
         lines.append("<i>قیمت گردشده — دقیق نیست</i>")
 
-    return "\n".join(lines)[:1000]
+    # آدرس کامل و دیده‌شدنی، نه لینک پنهان: تلگرام اندروید برای دکمه‌ی لینک و
+    # <a href> همیشه «Open Link» می‌پرسد ولی آدرسی که متنش خودِ آدرس است را
+    # مستقیم باز می‌کند. پس این خط با یک لمس اپ دیوار را باز می‌کند.
+    link = f"\n🔗 {esc(post_url(item['token']))}" if item.get("token") else ""
+    return "\n".join(lines)[:1000 - len(link)] + link
 
 
 def post_url(token):
