@@ -89,16 +89,22 @@ def caption(item, median):
     return "\n".join(lines)[:1000]
 
 
+def post_url(token):
+    """لینک آگهی برای دکمه و متن. تلگرام فقط http/https را در دکمه می‌پذیرد و
+    App Link دیوار روی گوشی‌های ایران تأیید نمی‌شود (سرویس تأیید گوگل مسدود است)،
+    پس با PUBLIC_URL از صفحه /go/ پنل رد می‌شویم که در اندروید اپ دیوار را باز می‌کند."""
+    if config.PUBLIC_URL:
+        return f"{config.PUBLIC_URL}/go/{token}"
+    return f"https://divar.ir/v/{token}"
+
+
 def keyboard(token, bookmarked=False, url=None):
     star = "★ بوکمارک شد" if bookmarked else "☆ بوکمارک"
     row = [
         InlineKeyboardButton("🗑 حذف", callback_data=f"t:{token}"),
         InlineKeyboardButton(star, callback_data=f"b:{token}"),
     ]
-    # divar.ir/v/* هم App Link اندروید است هم Universal Link آیفون، پس اگر اپ
-    # دیوار نصب باشد همین لینک https خودِ اپ را باز می‌کند. تلگرام فقط http/https
-    # را در دکمه می‌پذیرد، بنابراین divar:// اینجا ممکن نیست.
-    if url:
+    if url:  # از post_url
         row.append(InlineKeyboardButton("🔗 آگهی در دیوار", url=url))
     return InlineKeyboardMarkup([row])
 
@@ -151,7 +157,7 @@ def bookmarks_text(rows, store, interval_minutes, rate):
         lines.append(
             f"{i}. <b>{size}</b> · {esc(r.get('district') or '')} · {per_m}   {status}\n"
             f"   {title}\n"
-            f"   <a href=\"https://divar.ir/v/{esc(token)}\">دیوار</a>"
+            f"   <a href=\"{esc(post_url(token))}\">دیوار</a>"
             + (f"   💬 {esc(r['note'])}" if r.get("note") else ""))
     return "\n".join(lines)
 

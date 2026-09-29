@@ -123,7 +123,7 @@ def item_detail(store, token):
 # ---------- ارسال ----------
 
 async def post_item(bot, store, item, median, search_id):
-    kb = fmt.keyboard(item["token"], item.get("bookmarked"), item.get("url"))
+    kb = fmt.keyboard(item["token"], item.get("bookmarked"), fmt.post_url(item["token"]))
 
     # همین یک درخواست هم عکس‌های اندازه کامل می‌دهد هم زمان انتشار
     detail = await asyncio.to_thread(item_detail, store, item["token"])
@@ -410,7 +410,7 @@ async def on_callback(update: Update, ctx):
                 store.unmark(token, "bookmark")
             try:
                 await q.edit_message_reply_markup(
-                    fmt.keyboard(token, on, f"https://divar.ir/v/{token}"))
+                    fmt.keyboard(token, on, fmt.post_url(token)))
             except BadRequest:
                 pass
             await q.answer("★ بوکمارک شد" if on else "بوکمارک برداشته شد")

@@ -6,11 +6,13 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import time
+from urllib.parse import quote
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -111,6 +113,36 @@ class SearchRequest(BaseModel):
 @app.get("/")
 def index():
     return FileResponse(os.path.join(STATIC, "index.html"))
+
+
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{4,32}$")
+
+_GO_HTML = """<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>دیوار</title>
+<style>body{font-family:sans-serif;text-align:center;padding:4rem 1rem;color:#222}
+.btn{display:block;max-width:22rem;margin:1.5rem auto;padding:1rem;border-radius:.75rem;
+background:#a62626;color:#fff;font-size:1.2rem;text-decoration:none}</style></head>
+<body><p>در حال باز کردن اپ دیوار…</p>
+<a class="btn" href="__INTENT__">باز کردن در اپ دیوار</a>
+<a href="__WEB__">نمایش در مرورگر</a>
+<script>location.replace("__INTENT__");</script></body></html>"""
+
+
+@app.get("/go/{token}")
+def go(token: str, request: Request):
+    """مقصد دکمه «آگهی در دیوار» بات (bot_format.post_url). در اندروید با intent://
+    مستقیم به پکیج ir.divar می‌رویم — بی‌نیاز از تأیید App Link که در ایران شکست
+    می‌خورد. کروم این پرش خودکار را می‌پذیرد چون زنجیره از intent تلگرام شروع شده؛
+    اگر نپذیرفت دکمه صفحه همان کار را با لمس کاربر می‌کند. بقیه مستقیم به دیوار."""
+    if not _TOKEN_RE.match(token):
+        raise HTTPException(404)
+    web = f"https://divar.ir/v/{token}"
+    if "android" not in request.headers.get("user-agent", "").lower():
+        return RedirectResponse(web)
+    intent = (f"intent://divar.ir/v/{token}#Intent;scheme=https;package=ir.divar;"
+              f"S.browser_fallback_url={quote(web, safe='')};end")
+    return HTMLResponse(_GO_HTML.replace("__INTENT__", intent).replace("__WEB__", web))
 
 
 @app.get("/api/districts")

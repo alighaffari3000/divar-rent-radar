@@ -42,6 +42,10 @@ NOTIFY_PRICE_DROP_PCT = _float("NOTIFY_PRICE_DROP_PCT", 5)
 # حداکثر چند آگهی در هر بار اطلاع‌رسانی
 NOTIFY_MAX_ITEMS = _int("NOTIFY_MAX_ITEMS", 10)
 
+# آدرس عمومی پنل (مثل http://1.2.3.4:8420). اگر ست باشد لینک آگهی در بات به
+# /go/<token> پنل می‌رود که در اندروید اپ دیوار را باز می‌کند (web/app.py).
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip().rstrip("/")
+
 
 def telegram_ready():
     return bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)
