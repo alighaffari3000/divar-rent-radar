@@ -40,10 +40,9 @@ def caption(item, median):
         head += f" · {esc(district)}"
 
     lines = [f"<b>{head}</b>"]
-    lines.append(
-        f"💰 ودیعه {m(item.get('deposit'))}م + اجاره {m(item.get('monthly_rent'))}م"
-        f"  →  رهن معادل <b>{m(item.get('full_rent_equivalent'))}م</b>"
-        f" (متری {m(item.get('fre_per_meter'))}م)")
+    lines.append(f"💰 ودیعه {m(item.get('deposit'))}م + اجاره {m(item.get('monthly_rent'))}م")
+    lines.append(f"🧮 رهن معادل <b>{m(item.get('full_rent_equivalent'))}م</b>"
+                 f" (متری {m(item.get('fre_per_meter'))}م)")
 
     vs = item.get("vs_market_pct")
     if vs is not None:
