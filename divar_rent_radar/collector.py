@@ -527,6 +527,9 @@ def fetch_phone(token, auth):
     if resp.status_code in (401, 403):
         raise PermissionError("توکن دیوار منقضی شده — sAccessToken تازه در .env بگذارید")
     resp.raise_for_status()
+    # درخواست غیرمرورگری را دیوار با کپچا جواب می‌دهد (۲۰۲۶-۰۹-۳۰ از سرور دیده شد)
+    if "hip_action" in resp.json():
+        raise PermissionError("دیوار کپچا خواست — شماره را در خود دیوار ببینید")
     m = _PHONE_RE.search(resp.text.translate(_FA_DIGITS))
     return m.group(0) if m else None
 
