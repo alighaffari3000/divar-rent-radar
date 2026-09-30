@@ -5,3 +5,4 @@ python-dotenv>=1.0
 python-telegram-bot>=21.0
 pydantic>=2.7
 pillow>=11.0
+curl_cffi>=0.7

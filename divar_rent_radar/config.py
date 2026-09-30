@@ -49,6 +49,10 @@ PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip().rstrip("/")
 # کوکی sAccessToken نشست دیوار (چند ساعت اعتبار دارد)، برای دکمه «شماره تماس». خالی = دکمه کار نمی‌کند.
 DIVAR_AUTH_TOKEN = os.environ.get("DIVAR_AUTH_TOKEN", "").strip()
 
+# درخواست شماره از این پراکسی می‌رود: تونل معکوس به IP خانه (socks5h://127.0.0.1:1080).
+# روی سرور باید ست باشد؛ شماره هیچ‌وقت با IP دیتاسنتر گرفته نشود.
+DIVAR_PROXY = os.environ.get("DIVAR_PROXY", "").strip()
+
 
 def telegram_ready():
     return bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)

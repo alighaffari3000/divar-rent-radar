@@ -365,7 +365,10 @@ async def post_phone(token: str):
     if not config.DIVAR_AUTH_TOKEN:
         raise HTTPException(400, "DIVAR_AUTH_TOKEN در .env تنظیم نشده")
     try:
-        phone = await asyncio.to_thread(collector.fetch_phone, token, config.DIVAR_AUTH_TOKEN)
+        phone = await asyncio.to_thread(collector.fetch_phone, token,
+                                        config.DIVAR_AUTH_TOKEN, config.DIVAR_PROXY)
     except PermissionError as exc:
         raise HTTPException(401, str(exc))
+    except ConnectionError as exc:
+        raise HTTPException(502, str(exc))
     return {"phone": phone}

@@ -514,19 +514,29 @@ CONTACT_URL = "https://api.divar.ir/v8/postcontact/web/contact_info_v2/{token}"
 _PHONE_RE = re.compile(r"(?<!\d)(?:\+98|0)9\d{9}(?!\d)|(?<!\d)0[1-8]\d{9}(?!\d)")
 
 
-def fetch_phone(token, auth):
+def fetch_phone(token, auth, proxy=None):
     """شماره تماس آگهی‌دهنده. auth = کوکی sAccessToken نشست دیوار (کاربر خودش لاگین می‌کند).
 
     None یعنی آگهی شماره ندارد (فقط چت). دیوار دیدن شماره را روزانه محدود
     می‌کند، پس فقط با کلیک کاربر صدا زده شود، نه در چرخه بات.
     """
-    # وب‌سایت خود دیوار هم فقط با کوکی و همین بدنه می‌فرستد (بدون هدر Authorization)
-    resp = requests.post(CONTACT_URL.format(token=token), headers=HEADERS,
+    # وب‌سایت خود دیوار هم فقط با کوکی و همین بدنه می‌فرستد (بدون هدر Authorization).
+    # اثر انگشت TLS کروم (curl_cffi) و خروج از IP خانه از راه تونل معکوس (proxy)،
+    # نه IP دیتاسنتر. User-Agent را خود impersonate هماهنگ با اثر انگشت می‌گذارد.
+    from curl_cffi import requests as cffi
+
+    try:
+        resp = cffi.post(CONTACT_URL.format(token=token), impersonate="chrome",
+                         headers={"Origin": "https://divar.ir", "Referer": "https://divar.ir/"},
                          cookies={"sAccessToken": auth},
-                         json={"contact_uuid": str(uuid.uuid4())}, timeout=30)
+                         json={"contact_uuid": str(uuid.uuid4())}, timeout=30,
+                         proxies={"https": proxy} if proxy else None)
+    except Exception as exc:
+        raise ConnectionError(f"دیوار یا تونل در دسترس نیست: {type(exc).__name__}") from exc
     if resp.status_code in (401, 403):
         raise PermissionError("توکن دیوار منقضی شده — sAccessToken تازه در .env بگذارید")
-    resp.raise_for_status()
+    if resp.status_code != 200:
+        raise ConnectionError(f"دیوار پاسخ {resp.status_code} داد")
     # درخواست غیرمرورگری را دیوار با کپچا جواب می‌دهد (۲۰۲۶-۰۹-۳۰ از سرور دیده شد)
     if "hip_action" in resp.json():
         raise PermissionError("دیوار کپچا خواست — شماره را در خود دیوار ببینید")

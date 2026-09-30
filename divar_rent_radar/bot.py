@@ -386,13 +386,14 @@ async def on_callback(update: Update, ctx):
             await q.answer("DIVAR_AUTH_TOKEN در .env تنظیم نشده", show_alert=True)
             return
         try:
-            phone = await asyncio.to_thread(collector.fetch_phone, token, config.DIVAR_AUTH_TOKEN)
+            phone = await asyncio.to_thread(collector.fetch_phone, token,
+                                            config.DIVAR_AUTH_TOKEN, config.DIVAR_PROXY)
         except PermissionError as exc:
             await q.answer(str(exc), show_alert=True)
             return
-        except requests.RequestException:
-            log.warning("گرفتن شماره %s نشد", token, exc_info=True)
-            await q.answer("دیوار جواب نداد — دوباره امتحان کنید", show_alert=True)
+        except ConnectionError as exc:
+            log.warning("گرفتن شماره %s نشد: %s", token, exc)
+            await q.answer(f"{exc} — دوباره امتحان کنید", show_alert=True)
             return
         await q.answer()
         # reply تا شماره در تلگرام قابل لمس (تماس) باشد
