@@ -109,7 +109,8 @@ def keyboard(token, bookmarked=False, url=None):
     ]
     if url:  # از post_url
         row.append(InlineKeyboardButton("🔗 آگهی در دیوار", url=url))
-    return InlineKeyboardMarkup([row])
+    return InlineKeyboardMarkup([row, [InlineKeyboardButton("📞 شماره تماس",
+                                                            callback_data=f"p:{token}")]])
 
 
 def drop_reply(item, old_fre):

@@ -355,3 +355,17 @@ async def post_detail(token: str):
     if not detail or "error" in detail:
         raise HTTPException(404, "آگهی یافت نشد")
     return detail
+
+
+@app.get("/api/post/{token}/phone")
+async def post_phone(token: str):
+    """شماره تماس — فقط با کلیک، چون دیوار سقف روزانه دارد."""
+    from divar_rent_radar import collector, config
+
+    if not config.DIVAR_AUTH_TOKEN:
+        raise HTTPException(400, "DIVAR_AUTH_TOKEN در .env تنظیم نشده")
+    try:
+        phone = await asyncio.to_thread(collector.fetch_phone, token, config.DIVAR_AUTH_TOKEN)
+    except PermissionError as exc:
+        raise HTTPException(401, str(exc))
+    return {"phone": phone}

@@ -920,14 +920,31 @@ async function toggleDetail(tr, r) {
             <div><b>ساخت:</b> ${esc(f["ساخت"] ?? "—")}</div>
             <div><b>ودیعه و اجاره:</b> ${esc(f["ودیعه و اجاره"] ?? "—")}</div>
             <div><b>عکس‌ها:</b> ${esc(f["تصویر‌ها برای همین ملک است؟"] ?? "—")}</div>
+            <div class="mt-2"><button type="button" class="phone-btn text-brand-500 hover:underline">📞 نمایش شماره تماس</button></div>
           </div>
           <div class="flex flex-wrap content-start gap-1">${feats || "—"}</div>
           <div class="text-theme-xs leading-6 whitespace-pre-line text-gray-600 dark:text-gray-400">${esc((d.description ?? "").slice(0, 500))}</div>
         </div>
       </div>
     </td>`;
+    row.querySelector(".phone-btn").onclick = (e) => showPhone(e.currentTarget, r.token);
   } catch (err) {
     row.innerHTML = `<td colspan="${COLS}" class="px-4 py-3 text-theme-sm text-error-500">${esc(err.message)}</td>`;
+  }
+}
+
+async function showPhone(btn, token) {
+  btn.disabled = true;
+  btn.textContent = "در حال گرفتن شماره ...";
+  try {
+    const res = await fetch(`/api/post/${encodeURIComponent(token)}/phone`);
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.detail || "شماره در دسترس نیست");
+    btn.outerHTML = d.phone
+      ? `<a href="tel:${esc(d.phone)}" class="text-brand-500" dir="ltr">📞 ${esc(d.phone)}</a>`
+      : `<span>این آگهی شماره ندارد (فقط چت)</span>`;
+  } catch (err) {
+    btn.outerHTML = `<span class="text-error-500">${esc(err.message)}</span>`;
   }
 }
 

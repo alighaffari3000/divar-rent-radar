@@ -381,6 +381,24 @@ async def on_callback(update: Update, ctx):
         await q.answer()
         return
 
+    if kind == "p":
+        if not config.DIVAR_AUTH_TOKEN:
+            await q.answer("DIVAR_AUTH_TOKEN در .env تنظیم نشده", show_alert=True)
+            return
+        try:
+            phone = await asyncio.to_thread(collector.fetch_phone, token, config.DIVAR_AUTH_TOKEN)
+        except PermissionError as exc:
+            await q.answer(str(exc), show_alert=True)
+            return
+        except requests.RequestException:
+            log.warning("گرفتن شماره %s نشد", token, exc_info=True)
+            await q.answer("دیوار جواب نداد — دوباره امتحان کنید", show_alert=True)
+            return
+        await q.answer()
+        # reply تا شماره در تلگرام قابل لمس (تماس) باشد
+        await q.message.reply_text(f"📞 {phone}" if phone else "این آگهی شماره ندارد (فقط چت)")
+        return
+
     with Store() as store:
         if kind == "t":
             store.mark(token, "trash")
