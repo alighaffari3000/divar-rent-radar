@@ -515,17 +515,17 @@ _PHONE_RE = re.compile(r"(?<!\d)(?:\+98|0)9\d{9}(?!\d)|(?<!\d)0[1-8]\d{9}(?!\d)"
 
 
 def fetch_phone(token, auth):
-    """شماره تماس آگهی‌دهنده. auth = کوکی token نشست دیوار (کاربر خودش لاگین می‌کند).
+    """شماره تماس آگهی‌دهنده. auth = کوکی sAccessToken نشست دیوار (کاربر خودش لاگین می‌کند).
 
     None یعنی آگهی شماره ندارد (فقط چت). دیوار دیدن شماره را روزانه محدود
     می‌کند، پس فقط با کلیک کاربر صدا زده شود، نه در چرخه بات.
     """
     # وب‌سایت خود دیوار هم فقط با کوکی و همین بدنه می‌فرستد (بدون هدر Authorization)
     resp = requests.post(CONTACT_URL.format(token=token), headers=HEADERS,
-                         cookies={"token": auth},
+                         cookies={"sAccessToken": auth},
                          json={"contact_uuid": str(uuid.uuid4())}, timeout=30)
     if resp.status_code in (401, 403):
-        raise PermissionError("توکن دیوار نامعتبر یا منقضی است")
+        raise PermissionError("توکن دیوار منقضی شده — sAccessToken تازه در .env بگذارید")
     resp.raise_for_status()
     m = _PHONE_RE.search(resp.text.translate(_FA_DIGITS))
     return m.group(0) if m else None

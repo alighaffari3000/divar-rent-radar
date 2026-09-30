@@ -46,7 +46,7 @@ NOTIFY_MAX_ITEMS = _int("NOTIFY_MAX_ITEMS", 10)
 # /go/<token> پنل می‌رود که در اندروید اپ دیوار را باز می‌کند (web/app.py).
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "").strip().rstrip("/")
 
-# کوکی token نشست دیوار، برای دکمه «شماره تماس». خالی = دکمه کار نمی‌کند.
+# کوکی sAccessToken نشست دیوار (چند ساعت اعتبار دارد)، برای دکمه «شماره تماس». خالی = دکمه کار نمی‌کند.
 DIVAR_AUTH_TOKEN = os.environ.get("DIVAR_AUTH_TOKEN", "").strip()
 
 
