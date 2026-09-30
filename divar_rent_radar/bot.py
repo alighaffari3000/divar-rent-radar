@@ -381,25 +381,6 @@ async def on_callback(update: Update, ctx):
         await q.answer()
         return
 
-    if kind == "p":
-        if not config.DIVAR_AUTH_TOKEN:
-            await q.answer("DIVAR_AUTH_TOKEN در .env تنظیم نشده", show_alert=True)
-            return
-        try:
-            phone = await asyncio.to_thread(collector.fetch_phone, token,
-                                            config.DIVAR_AUTH_TOKEN, config.DIVAR_PROXY)
-        except PermissionError as exc:
-            await q.answer(str(exc), show_alert=True)
-            return
-        except ConnectionError as exc:
-            log.warning("گرفتن شماره %s نشد: %s", token, exc)
-            await q.answer(f"{exc} — دوباره امتحان کنید", show_alert=True)
-            return
-        await q.answer()
-        # reply تا شماره در تلگرام قابل لمس (تماس) باشد
-        await q.message.reply_text(f"📞 {phone}" if phone else "این آگهی شماره ندارد (فقط چت)")
-        return
-
     with Store() as store:
         if kind == "t":
             store.mark(token, "trash")
@@ -447,6 +428,40 @@ async def on_callback(update: Update, ctx):
             await q.answer()
 
 
+async def on_phone(update: Update, ctx):
+    """دکمه شماره تماس. جدا و غیرمسدودکننده ثبت شده (block=False): کُند یا خراب
+    بودن تونل/دیوار نه بقیه دکمه‌ها و دستورها را معطل می‌کند نه چرخه پست را.
+    هیچ خطایی از این تابع بیرون نمی‌رود."""
+    q = update.callback_query
+    token = (q.data or "")[2:]
+    alert = None
+    phone = None
+    try:
+        if not allowed(update) or not token:
+            alert = ""
+        elif not config.DIVAR_AUTH_TOKEN:
+            alert = "DIVAR_AUTH_TOKEN در .env تنظیم نشده"
+        else:
+            phone = await asyncio.to_thread(collector.fetch_phone, token,
+                                            config.DIVAR_AUTH_TOKEN, config.DIVAR_PROXY)
+    except (PermissionError, ConnectionError) as exc:
+        log.warning("گرفتن شماره %s نشد: %s", token, exc)
+        alert = str(exc)
+    except Exception:
+        log.exception("گرفتن شماره %s خطای غیرمنتظره داد", token)
+        alert = "گرفتن شماره خطا داد — بعداً دوباره امتحان کنید"
+
+    try:
+        if alert is not None:
+            await q.answer(alert[:200], show_alert=bool(alert))
+            return
+        await q.answer()
+        # reply تا شماره در تلگرام قابل لمس (تماس) باشد
+        await q.message.reply_text(f"📞 {phone}" if phone else "این آگهی شماره ندارد (فقط چت)")
+    except TelegramError as exc:  # مثلاً «query is too old» بعد از انتظار طولانی
+        log.warning("پاسخ دکمه شماره %s نرسید: %s", token, exc)
+
+
 # ---------- راه‌اندازی ----------
 
 async def post_init(app):
@@ -475,6 +490,7 @@ def main():
     app.add_handler(CommandHandler("trash", cmd_trash))
     app.add_handler(CommandHandler("mute", cmd_mute))
     app.add_handler(CommandHandler("searches", cmd_searches))
+    app.add_handler(CallbackQueryHandler(on_phone, pattern=r"^p:", block=False))
     app.add_handler(CallbackQueryHandler(on_callback))
 
     app.run_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)

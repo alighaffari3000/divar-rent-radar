@@ -529,7 +529,7 @@ def fetch_phone(token, auth, proxy=None):
         resp = cffi.post(CONTACT_URL.format(token=token), impersonate="chrome",
                          headers={"Origin": "https://divar.ir", "Referer": "https://divar.ir/"},
                          cookies={"sAccessToken": auth},
-                         json={"contact_uuid": str(uuid.uuid4())}, timeout=30,
+                         json={"contact_uuid": str(uuid.uuid4())}, timeout=12,
                          proxies={"https": proxy} if proxy else None)
     except Exception as exc:
         raise ConnectionError(f"دیوار یا تونل در دسترس نیست: {type(exc).__name__}") from exc
@@ -538,7 +538,7 @@ def fetch_phone(token, auth, proxy=None):
     if resp.status_code != 200:
         raise ConnectionError(f"دیوار پاسخ {resp.status_code} داد")
     # درخواست غیرمرورگری را دیوار با کپچا جواب می‌دهد (۲۰۲۶-۰۹-۳۰ از سرور دیده شد)
-    if "hip_action" in resp.json():
+    if "hip_action" in resp.text:
         raise PermissionError("دیوار کپچا خواست — شماره را در خود دیوار ببینید")
     m = _PHONE_RE.search(resp.text.translate(_FA_DIGITS))
     return m.group(0) if m else None
