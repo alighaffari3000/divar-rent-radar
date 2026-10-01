@@ -354,7 +354,7 @@ async def post_detail(token: str):
     detail = await asyncio.to_thread(work)
     if not detail or "error" in detail:
         raise HTTPException(404, "آگهی یافت نشد")
-    return detail
+    return {**detail, "phone_enabled": bool(config.DIVAR_AUTH_TOKEN)}
 
 
 @app.get("/api/post/{token}/phone")

@@ -920,14 +920,15 @@ async function toggleDetail(tr, r) {
             <div><b>ساخت:</b> ${esc(f["ساخت"] ?? "—")}</div>
             <div><b>ودیعه و اجاره:</b> ${esc(f["ودیعه و اجاره"] ?? "—")}</div>
             <div><b>عکس‌ها:</b> ${esc(f["تصویر‌ها برای همین ملک است؟"] ?? "—")}</div>
-            <div class="mt-2"><button type="button" class="phone-btn text-brand-500 hover:underline">📞 نمایش شماره تماس</button></div>
+            ${d.phone_enabled ? `<div class="mt-2"><button type="button" class="phone-btn text-brand-500 hover:underline">📞 نمایش شماره تماس</button></div>` : ""}
           </div>
           <div class="flex flex-wrap content-start gap-1">${feats || "—"}</div>
           <div class="text-theme-xs leading-6 whitespace-pre-line text-gray-600 dark:text-gray-400">${esc((d.description ?? "").slice(0, 500))}</div>
         </div>
       </div>
     </td>`;
-    row.querySelector(".phone-btn").onclick = (e) => showPhone(e.currentTarget, r.token);
+    const phoneBtn = row.querySelector(".phone-btn");
+    if (phoneBtn) phoneBtn.onclick = (e) => showPhone(e.currentTarget, r.token);
   } catch (err) {
     row.innerHTML = `<td colspan="${COLS}" class="px-4 py-3 text-theme-sm text-error-500">${esc(err.message)}</td>`;
   }

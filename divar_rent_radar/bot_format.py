@@ -109,8 +109,10 @@ def keyboard(token, bookmarked=False, url=None):
     ]
     if url:  # از post_url
         row.append(InlineKeyboardButton("🔗 آگهی در دیوار", url=url))
-    return InlineKeyboardMarkup([row, [InlineKeyboardButton("📞 شماره تماس",
-                                                            callback_data=f"p:{token}")]])
+    rows = [row]
+    if config.DIVAR_AUTH_TOKEN:  # بدون توکن دیوار دکمه شماره فقط خطا می‌دهد
+        rows.append([InlineKeyboardButton("📞 شماره تماس", callback_data=f"p:{token}")])
+    return InlineKeyboardMarkup(rows)
 
 
 def drop_reply(item, old_fre):
