@@ -173,6 +173,12 @@ def district_shapes():
                         media_type="application/json")
 
 
+@app.get("/api/metro")
+def metro():
+    """ایستگاه‌های مترو برای لایه‌ی نقشه."""
+    return geo.load_metro()
+
+
 PREFETCH_TOP = 20  # جزئیات چند آگهی برتر را از قبل بگیریم
 
 

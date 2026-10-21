@@ -148,6 +148,50 @@ map.on("mouseout", unhoverDistrict);
 
 state.markers = L.layerGroup().addTo(map);
 
+/* ایستگاه‌های مترو: زیر نقطه‌های آگهی و بالای مرز محله‌ها. فقط از زوم METRO_MIN_ZOOM
+   به بعد دیده می‌شوند تا در نمای شهر نقشه شلوغ نشود. کلیک روی ایستگاه شعاع پیاده‌روی
+   را می‌کشد؛ کلیک دوباره همان را برمی‌دارد. */
+const METRO_MIN_ZOOM = 13;
+const METRO_WALK_M = 800; // همان آستانه‌ی «نزدیک مترو» در جدول
+map.createPane("metro").style.zIndex = 380;
+const metroLayer = L.layerGroup();
+let metroRing = null;
+let metroRingFor = null;
+
+function toggleMetroRing(st) {
+  if (metroRing) map.removeLayer(metroRing);
+  metroRing = null;
+  if (metroRingFor === st) return void (metroRingFor = null);
+  metroRingFor = st;
+  metroRing = L.circle([st.lat, st.lon], {
+    pane: "metro", radius: METRO_WALK_M, interactive: false,
+    color: "#7a5af8", weight: 1.5, fillOpacity: 0.08,
+  }).addTo(map);
+}
+
+function syncMetroLayer() {
+  const show = map.getZoom() >= METRO_MIN_ZOOM;
+  if (show !== map.hasLayer(metroLayer)) show ? metroLayer.addTo(map) : map.removeLayer(metroLayer);
+  // با دور شدن از ایستگاه، دایره‌ی بی‌ایستگاه روی نقشه نماند
+  if (!show && metroRing) toggleMetroRing(metroRingFor);
+}
+
+fetch("/api/metro")
+  .then((res) => res.json())
+  .then((stations) => {
+    stations.forEach((st) =>
+      L.circleMarker([st.lat, st.lon], {
+        pane: "metro", radius: 5, color: "#7a5af8", weight: 2, fillColor: "#fff", fillOpacity: 1,
+      })
+        .bindTooltip(`مترو ${esc(st.name)}`, { direction: "top" })
+        .on("click", () => toggleMetroRing(st))
+        .addTo(metroLayer)
+    );
+    syncMetroLayer();
+  })
+  .catch(() => {}); // بدون ایستگاه‌ها نقشه همچنان کار می‌کند
+map.on("zoomend", syncMetroLayer);
+
 map.addControl(
   new L.Control.Draw({
     // کادر کشیده‌شده روی نقشه نمی‌ماند (پایین را ببینید)، پس ابزار حذف لازم نیست
