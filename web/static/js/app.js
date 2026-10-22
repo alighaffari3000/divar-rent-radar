@@ -153,6 +153,10 @@ state.markers = L.layerGroup().addTo(map);
    را می‌کشد؛ کلیک دوباره همان را برمی‌دارد. */
 const METRO_MIN_ZOOM = 13;
 const METRO_WALK_M = 800; // همان آستانه‌ی «نزدیک مترو» در جدول
+// رنگ هر خط از OpenStreetMap (خط ۴ زرد خالص روی نقشه کم‌دیده است، کمی تیره‌تر)
+const METRO_LINE_COLORS = {
+  1: "#ff0f04", 2: "#003380", 3: "#00aad4", 4: "#f5c211", 5: "#58e558", 6: "#ff5599", 7: "#6a00ff",
+};
 map.createPane("metro").style.zIndex = 380;
 const metroLayer = L.layerGroup();
 let metroRing = null;
@@ -165,7 +169,7 @@ function toggleMetroRing(st) {
   metroRingFor = st;
   metroRing = L.circle([st.lat, st.lon], {
     pane: "metro", radius: METRO_WALK_M, interactive: false,
-    color: "#7a5af8", weight: 1.5, fillOpacity: 0.08,
+    color: METRO_LINE_COLORS[st.lines[0]] || "#7a5af8", weight: 1.5, fillOpacity: 0.08,
   }).addTo(map);
 }
 
@@ -180,8 +184,11 @@ fetch("/api/metro")
   .then((res) => res.json())
   .then((stations) => {
     stations.forEach((st) =>
+      // تک‌خطی: یک‌رنگ؛ تقاطعی: مرز یک خط، داخل رنگ خط دیگر
       L.circleMarker([st.lat, st.lon], {
-        pane: "metro", radius: 5, color: "#7a5af8", weight: 2, fillColor: "#fff", fillOpacity: 1,
+        pane: "metro", radius: 5, weight: 2, fillOpacity: 1,
+        color: METRO_LINE_COLORS[st.lines[0]] || "#7a5af8",
+        fillColor: METRO_LINE_COLORS[st.lines[1] ?? st.lines[0]] || "#7a5af8",
       })
         .bindTooltip(`مترو ${esc(st.name)}`, { direction: "top" })
         .on("click", () => toggleMetroRing(st))
