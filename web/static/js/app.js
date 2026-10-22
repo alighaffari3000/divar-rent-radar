@@ -1044,8 +1044,12 @@ function renderMarkers() {
           امتیاز ${fa(r.score)} · متری ${million(r.fre_per_meter)}م · ${fa(r.size)}م² · ${fa(r.rooms)} خواب<br>
           ${pct(r.vs_market_pct)} نسبت به بازار<br>
           <a href="${esc(r.url)}" target="_blank" rel="noopener">دیدن در دیوار</a>
-        </div>`
+        </div>`,
+        // با هاور باز و با برداشتن موس بسته می‌شود؛ نقشه نباید زیر موس بپرد
+        { autoPan: false, closeButton: false }
       )
+      .on("mouseover", (e) => e.target.openPopup())
+      .on("mouseout", (e) => e.target.closePopup())
       .on("click", () => {
         // پین → ردیف: کلیک روی پین، ردیف را می‌آورد و لحظه‌ای روشن می‌کند
         const tr = document.querySelector(`tr[data-token="${CSS.escape(r.token)}"]`);
