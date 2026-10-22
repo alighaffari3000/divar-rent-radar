@@ -152,6 +152,7 @@ state.markers = L.layerGroup().addTo(map);
    به بعد دیده می‌شوند تا در نمای شهر نقشه شلوغ نشود. کلیک روی ایستگاه شعاع پیاده‌روی
    را می‌کشد؛ کلیک دوباره همان را برمی‌دارد. */
 const METRO_MIN_ZOOM = 13;
+const METRO_DETAIL_ZOOM = 15;
 const METRO_WALK_M = 800; // همان آستانه‌ی «نزدیک مترو» در جدول
 // رنگ هر خط از OpenStreetMap (خط ۴ زرد خالص روی نقشه کم‌دیده است، کمی تیره‌تر)
 const METRO_LINE_COLORS = {
@@ -169,11 +170,31 @@ function toggleMetroRing(st) {
   metroRingFor = st;
   metroRing = L.circle([st.lat, st.lon], {
     pane: "metro", radius: METRO_WALK_M, interactive: false,
-    color: METRO_LINE_COLORS[st.lines[0]] || "#7a5af8", weight: 1.5, fillOpacity: 0.08,
+    color: metroColor(st.lines[0]), weight: 1.5, fillOpacity: 0.08,
   }).addTo(map);
 }
 
+const metroColor = (line) => METRO_LINE_COLORS[line] || "#7a5af8";
+function metroFill(st) {
+  const [a, b] = st.lines;
+  return b ? `linear-gradient(90deg, ${metroColor(a)} 50%, ${metroColor(b)} 50%)` : metroColor(a);
+}
+
+// نشان ایستگاه در زوم کم نقطه‌ی کوچک است و از METRO_DETAIL_ZOOM به بعد «M» و نام می‌گیرد
+document.head.insertAdjacentHTML("beforeend", `<style>
+  .metro-pin { position:absolute; left:0; top:0; transform:translate(-50%,-50%); width:12px; height:12px;
+    box-sizing:border-box; border:2px solid #fff; border-radius:50%; box-shadow:0 0 3px rgba(0,0,0,.55);
+    display:flex; align-items:center; justify-content:center; }
+  .metro-pin b { display:none; color:#fff; font:700 12px/1 Tahoma,sans-serif; text-shadow:0 0 2px rgba(0,0,0,.7); }
+  .metro-name { display:none; position:absolute; left:0; top:14px; transform:translateX(-50%); white-space:nowrap;
+    font:600 11px Vazirmatn,Tahoma,sans-serif; font-style:normal; color:#1d2939; pointer-events:none;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
+  .metro-detail .metro-pin { width:22px; height:22px; }
+  .metro-detail .metro-pin b, .metro-detail .metro-name { display:block; }
+</style>`);
+
 function syncMetroLayer() {
+  map.getContainer().classList.toggle("metro-detail", map.getZoom() >= METRO_DETAIL_ZOOM);
   const show = map.getZoom() >= METRO_MIN_ZOOM;
   if (show !== map.hasLayer(metroLayer)) show ? metroLayer.addTo(map) : map.removeLayer(metroLayer);
   // با دور شدن از ایستگاه، دایره‌ی بی‌ایستگاه روی نقشه نماند
@@ -184,11 +205,15 @@ fetch("/api/metro")
   .then((res) => res.json())
   .then((stations) => {
     stations.forEach((st) =>
-      // تک‌خطی: یک‌رنگ؛ تقاطعی: مرز یک خط، داخل رنگ خط دیگر
-      L.circleMarker([st.lat, st.lon], {
-        pane: "metro", radius: 5, weight: 2, fillOpacity: 1,
-        color: METRO_LINE_COLORS[st.lines[0]] || "#7a5af8",
-        fillColor: METRO_LINE_COLORS[st.lines[1] ?? st.lines[0]] || "#7a5af8",
+      // تک‌خطی: یک‌رنگ؛ تقاطعی: نیمی رنگ یک خط و نیمی رنگ خط دیگر
+      L.marker([st.lat, st.lon], {
+        pane: "metro",
+        icon: L.divIcon({
+          className: "metro-icon",
+          iconSize: [0, 0],
+          html: `<div class="metro-pin" style="background:${metroFill(st)}"><b>M</b></div>
+                 <i class="metro-name">${esc(st.name)}</i>`,
+        }),
       })
         .bindTooltip(`مترو ${esc(st.name)}`, { direction: "top" })
         .on("click", () => toggleMetroRing(st))
