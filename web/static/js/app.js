@@ -1042,6 +1042,7 @@ function renderMarkers() {
         `<div style="font-family:Vazirmatn,Tahoma;direction:rtl;text-align:right">
           <b>${esc(r.title)}</b><br>
           امتیاز ${fa(r.score)} · متری ${million(r.fre_per_meter)}م · ${fa(r.size)}م² · ${fa(r.rooms)} خواب<br>
+          رهن کامل معادل ${million(r.full_rent_equivalent)}م (${million(r.deposit)} + ${million(r.monthly_rent)})<br>
           ${pct(r.vs_market_pct)} نسبت به بازار<br>
           <a href="${esc(r.url)}" target="_blank" rel="noopener">دیدن در دیوار</a>
         </div>`,
@@ -1233,3 +1234,16 @@ restoreLastSearch();
 loadSaved();
 loadCounts();
 loadSettings();
+
+// دکمه‌ی بازگشت سریع به بالا (نقشه)
+{
+  const btn = document.getElementById("to-top");
+  const scroller = document.getElementById("scroller");
+  const sync = () => {
+    const show = scroller.scrollTop >= 600;
+    btn.classList.toggle("hidden", !show);
+    btn.classList.toggle("flex", show);
+  };
+  scroller.addEventListener("scroll", sync, { passive: true });
+  btn.onclick = () => scroller.scrollTo({ top: 0, behavior: "smooth" });
+}
